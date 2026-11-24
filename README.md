@@ -50,12 +50,12 @@ clásicas con **modelos transformer** de Hugging Face (RT-DETR, DETR, SegFormer 
 
 ## Capturas
 
-Inicio, Calibración y Transformers se tomaron del Space desplegado (los tiempos de RT-DETR y DETR son
-en la GPU de ZeroGPU); la del Pipeline, de la app local con el mismo código.
+La de Transformers se tomó del Space desplegado (los tiempos de RT-DETR y DETR son en la GPU de
+ZeroGPU); las demás, de la app local con el mismo código.
 
-| Inicio | Calibración y homografía |
+| Analizar partido (modo guiado) | Calibración y homografía |
 |---|---|
-| ![Inicio](docs/capturas/inicio.png) | ![Homografía de la media cancha y vista cenital](docs/capturas/calibracion.png) |
+| ![Analizar partido: resultado en lenguaje sencillo y mapa de la cancha](docs/capturas/analizar.png) | ![Homografía de la media cancha y vista cenital](docs/capturas/calibracion.png) |
 | **Transformers (clásico vs. RT-DETR vs. DETR)** | **Pipeline completo (mapa cenital)** |
 | ![Comparación clásico vs. transformer](docs/capturas/transformers.png) | ![Pipeline: paso 7, mapa cenital](docs/capturas/pipeline.png) |
 
@@ -92,14 +92,16 @@ python scripts/download_samples.py     # descarga fotos reales con licencia libr
 python app.py
 ```
 
-Se abre en `http://127.0.0.1:7860`. La interfaz está hecha con **Gradio** y tiene una pestaña por tema.
-Recorrido sugerido: **1 · Calibración** (pulsar *Calibrar cámara* y marcar las 4 esquinas de la media
-cancha propia en la subpestaña *Homografía*) → pestañas 2 a 8 → **9 · Pipeline**.
+Se abre en `http://127.0.0.1:7860`. La interfaz está hecha con **Gradio** y pensada también para quien no
+sabe de visión artificial. Tiene tres secciones:
 
-Cada pestaña tiene la carga de imagen (ejemplo, archivo propio o un frame de video), sliders para los
-parámetros, el resultado al lado de la original y un desplegable **"¿Qué está pasando?"** con la teoría
-y las fórmulas. Las esquinas marcadas y la calibración se guardan en la sesión y las usan las pestañas
-de Caracterización y Pipeline.
+| Sección | Para qué sirve |
+|---|---|
+| 🏐 **Analizar partido** | Modo guiado en 3 pasos: elegir la imagen → marcar las 4 esquinas de la media cancha (opcional) → **Analizar**. El resultado sale en lenguaje sencillo (jugadores por equipo, balón y en qué lado de la cancha está cada uno) junto con la foto anotada y el mapa visto desde arriba. Un desplegable *¿Cómo se hizo?* muestra las 7 etapas y el tema del curso que usa cada una. |
+| 📚 **Temas del curso** | Una pestaña por tema (1 · Calibración … 9 · Pipeline). Cada una empieza con un recuadro **"En pocas palabras"**, deja a la vista solo los controles principales, guarda el resto en **⚙️ Opciones avanzadas** y tiene la teoría con fórmulas en **"¿Qué está pasando?"**. |
+| ℹ️ **Acerca del proyecto** | Autor, recorrido, pipeline y arquitectura. |
+
+Las esquinas marcadas y la calibración se guardan en la sesión y las comparten todas las secciones.
 
 ## Despliegue en Hugging Face Spaces (ZeroGPU)
 
@@ -141,9 +143,9 @@ Se usa un flujo tipo **Git Flow simplificado**:
 
 | Rama | Propósito |
 |---|---|
-| `main` | Versión estable y entregable. Solo recibe merges desde `develop` y se etiqueta en cada versión (`v1.0.0`, `v1.1.0`, `v2.0.0`, `v2.0.1`). |
+| `main` | Versión estable y entregable. Solo recibe merges desde `develop` y se etiqueta en cada versión (`v1.0.0`, `v1.1.0`, `v2.0.0`, `v2.0.1`, `v2.1.0`). |
 | `develop` | Rama de integración: aquí se juntan los módulos terminados y probados. |
-| `feature/<tema>` | Una rama por módulo del curso: `feature/calibracion`, `feature/filtros`, `feature/histogramas`, `feature/umbralizacion`, `feature/morfologia`, `feature/segmentacion`, `feature/caracterizacion`, `feature/transformers`, `feature/ui` (y `feature/docs` para la documentación). Los cambios posteriores siguen el mismo flujo: `feature/camara-trasera` cambió la cámara a la vista trasera (`v1.1.0`) y `feature/gradio-zerogpu` pasó la interfaz a Gradio con ZeroGPU (`v2.0.0`). |
+| `feature/<tema>` | Una rama por módulo del curso: `feature/calibracion`, `feature/filtros`, `feature/histogramas`, `feature/umbralizacion`, `feature/morfologia`, `feature/segmentacion`, `feature/caracterizacion`, `feature/transformers`, `feature/ui` (y `feature/docs` para la documentación). Los cambios posteriores siguen el mismo flujo: `feature/camara-trasera` cambió la cámara a la vista trasera (`v1.1.0`) y `feature/gradio-zerogpu` pasó la interfaz a Gradio con ZeroGPU (`v2.0.0`); `feature/ui-sencilla` agregó el modo guiado para no expertos (`v2.1.0`). |
 
 Reglas:
 
@@ -251,6 +253,15 @@ gitGraph
     merge feature/docs-entrega
     checkout main
     merge develop tag: "v2.0.1"
+    checkout develop
+    branch feature/ui-sencilla
+    checkout feature/ui-sencilla
+    commit id: "feat(ui): modo guiado"
+    commit id: "docs: modo guiado"
+    checkout develop
+    merge feature/ui-sencilla
+    checkout main
+    merge develop tag: "v2.1.0"
 ```
 
 Para ver el historial real: `git log --oneline --graph --all`.
@@ -268,7 +279,7 @@ El código se organiza en tres capas con dependencias en un solo sentido
 flowchart TB
     subgraph UI["Capa de presentación · volleyvision/ui (Gradio)"]
         direction LR
-        APP["app.py<br/>pestañas y estado"] ~~~ PAG["paginas/<br/>p0_inicio … p9_pipeline"] ~~~ COMP["componentes.py<br/>imagen/video, esquinas por clic"] ~~~ MOD["modelos.py<br/>carga única + @spaces.GPU"]
+        APP["app.py<br/>secciones y estado"] ~~~ PAG["paginas/<br/>analizar (guiado), p0 … p9"] ~~~ COMP["componentes.py<br/>imagen/video, esquinas por clic"] ~~~ MOD["modelos.py<br/>carga única + @spaces.GPU"]
     end
     subgraph CORE["Capa de dominio · volleyvision/core (funciones puras, sin Gradio)"]
         direction LR
@@ -326,11 +337,11 @@ VolleyVision/
 │   │   └── pipeline.py
 │   ├── ui/                   # Gradio
 │   │   ├── app.py  ├── componentes.py  ├── modelos.py
-│   │   └── paginas/  p0_inicio.py … p9_pipeline.py
+│   │   └── paginas/  analizar.py (modo guiado), p0_inicio.py … p9_pipeline.py
 │   └── utils/                # io.py, visualizacion.py, sinteticos.py
 ├── data/samples/             # cancha y video sintéticos, tablero (descargadas/ se ignora)
 ├── scripts/                  # generar_sinteticos.py, download_samples.py
-├── tests/                    # pytest (98 pruebas)
+├── tests/                    # pytest (100 pruebas)
 ├── docs/                     # arquitectura, guion del video, capturas
 ├── app.py                    # punto de entrada (local y Hugging Face Spaces)
 ├── requirements.txt  ├── pytest.ini  ├── LICENSE  └── README.md
@@ -374,7 +385,7 @@ compara los tiempos en tu máquina.
 ## Pruebas
 
 ```bash
-pytest                 # 95 pruebas rápidas (sin descargar modelos)
+pytest                 # 97 pruebas rápidas (sin descargar modelos)
 pytest -m slow         # 3 pruebas que descargan y ejecutan los modelos de Hugging Face
 ```
 
@@ -391,7 +402,8 @@ Qué se verifica, entre otras cosas:
 - El pipeline clásico encuentra ≥ 7 de los 12 jugadores sintéticos (la vista trasera tiene oclusiones),
   el balón y los dos equipos.
 - La app de Gradio se construye y cada callback de la UI se ejecuta sin excepciones con la escena
-  sintética (sin levantar el servidor).
+  sintética (sin levantar el servidor); el modo guiado da un resumen con jugadores, balón y lado de la
+  cancha, y sin esquinas no dibuja el mapa.
 
 ---
 

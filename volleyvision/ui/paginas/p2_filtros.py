@@ -60,18 +60,22 @@ def lineas(*args):
 def construir(estado: gr.State) -> None:
     ui.encabezado("2 · Filtros", "Suavizado, detección de bordes y convolución manual aplicados a las líneas "
                                  "de la cancha.")
+    ui.en_pocas_palabras("un filtro recorre la imagen y cambia cada píxel según sus vecinos: así se quita el "
+                         "ruido (suavizado) o se resaltan los cambios bruscos de color, que son los bordes y las "
+                         "líneas de la cancha.")
     sel = ui.selector_imagen()
     E = sel.entradas
     with gr.Tabs():
         with gr.Tab("Suavizado"):
             with gr.Row():
                 metodo = gr.Dropdown(list(fi.SUAVIZADOS), value=fi.SUAVIZADOS[3], label="Filtro")
-                k = gr.Slider(1, 31, 9, step=2, label="Tamaño del kernel k (bilateral: diámetro d)")
+                k = gr.Slider(1, 31, 9, step=2, label="Intensidad: tamaño del kernel k (bilateral: diámetro d)")
                 ruido = gr.Dropdown(list(RUIDOS), value=RUIDOS[0], label="Agregar ruido para comparar")
-            with gr.Row():
-                sigma = gr.Slider(0, 10, 0, step=0.5, label="σ (0 = automático)", visible=False)
-                sc = gr.Slider(1, 200, 75, step=1, label="σ color (rango)")
-                se = gr.Slider(1, 200, 75, step=1, label="σ espacio")
+            with ui.opciones_avanzadas():
+                with gr.Row():
+                    sigma = gr.Slider(0, 10, 0, step=0.5, label="σ (0 = automático)", visible=False)
+                    sc = gr.Slider(1, 200, 75, step=1, label="σ color (rango)")
+                    se = gr.Slider(1, 200, 75, step=1, label="σ espacio")
             with gr.Row():
                 entrada = ui.imagen_salida("Entrada")
                 salida = ui.imagen_salida("Resultado")
@@ -94,10 +98,12 @@ Código: `core/filtros.py` → `suavizar`, `filtro_bilateral`.
 
         with gr.Tab("Bordes"):
             with gr.Row():
-                ks = gr.Radio([1, 3, 5, 7], value=3, label="Kernel Sobel / Laplaciano")
-                t1 = gr.Slider(0, 255, 50, step=1, label="Canny T_bajo")
+                t1 = gr.Slider(0, 255, 50, step=1, label="Canny T_bajo (sensibilidad)")
                 t2 = gr.Slider(0, 255, 150, step=1, label="Canny T_alto")
-                suav = gr.Slider(0, 11, 5, step=2, label="Suavizado previo (Canny)")
+            with ui.opciones_avanzadas():
+                with gr.Row():
+                    ks = gr.Radio([1, 3, 5, 7], value=3, label="Kernel Sobel / Laplaciano")
+                    suav = gr.Slider(0, 11, 5, step=2, label="Suavizado previo (Canny)")
             gal_bordes = ui.nueva_galeria(3)
             ui.que_esta_pasando(r"""
 * **Sobel**: $G_x = \begin{bmatrix}-1&0&1\\-2&0&2\\-1&0&1\end{bmatrix} * f$, $G_y = G_x^\top * f$,
@@ -139,14 +145,15 @@ código optimizado (SIMD y, para kernels grandes, la DFT).
             gr.on(None, convolucion, E + [texto, modo, usar_gris], [tarjetas, gal_conv], trigger_mode="always_last")
 
         with gr.Tab("Líneas de la cancha"):
-            with gr.Row():
-                d = gr.Slider(1, 15, 9, step=2, label="Diámetro bilateral")
-                b = gr.Slider(0, 255, 50, step=1, label="Canny T_bajo")
-                a = gr.Slider(0, 255, 150, step=1, label="Canny T_alto")
-                votos = gr.Slider(10, 300, 80, step=1, label="Votos Hough")
-            with gr.Row():
-                long_min = gr.Slider(10, 300, 60, step=1, label="Longitud mínima del segmento (px)")
-                hueco = gr.Slider(1, 50, 10, step=1, label="Hueco máximo (px)")
+            votos = gr.Slider(10, 300, 80, step=1, label="Votos Hough (más alto = solo las líneas más claras)")
+            with ui.opciones_avanzadas():
+                with gr.Row():
+                    d = gr.Slider(1, 15, 9, step=2, label="Diámetro bilateral")
+                    b = gr.Slider(0, 255, 50, step=1, label="Canny T_bajo")
+                    a = gr.Slider(0, 255, 150, step=1, label="Canny T_alto")
+                with gr.Row():
+                    long_min = gr.Slider(10, 300, 60, step=1, label="Longitud mínima del segmento (px)")
+                    hueco = gr.Slider(1, 50, 10, step=1, label="Hueco máximo (px)")
             gal_lineas = ui.nueva_galeria(3)
             ui.que_esta_pasando(r"""
 Cadena para resaltar las líneas de la cancha:

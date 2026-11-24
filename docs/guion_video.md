@@ -5,6 +5,9 @@
 - `source .venv/bin/activate && python app.py` (o abrir el Space de Hugging Face).
 - Ejecutar una vez SegFormer y SlimSAM (pestaña 6) y RT-DETR y DETR (pestaña 8) para que los modelos ya
   estén descargados y cargados: así los tiempos que se ven en el video son los de inferencia.
+- Las pestañas de los temas están en la sección **📚 Temas del curso**. Algunos controles que se usan
+  en el guion (forma del elemento estructurante, baldosas de CLAHE…) están dentro de **⚙️ Opciones
+  avanzadas**: ábrelas antes de mostrarlos.
 - Tener abiertos en el editor `README.md` y la carpeta `volleyvision/`, y una terminal con
   `git log --oneline --graph --all` listo.
 - Imagen de ejemplo principal: `cancha_sintetica.jpg`. Foto real: `voleibol_03.jpg` (o la que mejor
@@ -14,7 +17,7 @@
 
 ## 0:00 – 0:45 · Introducción
 
-**En pantalla:** pestaña **Inicio** de la app.
+**En pantalla:** sección **🏐 Analizar partido** de la app.
 
 > "Hola, soy Jorge Enrique Olaya Liévano y este es mi proyecto final de Visión Artificial:
 > **VolleyVision**. Es una aplicación que analiza fotos y video de voleibol con un pipeline de visión
@@ -24,7 +27,14 @@
 > morfología, segmentación y caracterización. Al final comparo las técnicas clásicas con modelos
 > transformer de Hugging Face, que uso solo en inferencia con pesos públicos, sin entrenar nada."
 
-Señalar la tabla del recorrido y el diagrama del pipeline.
+Pulsar **▶ Analizar** con la imagen de ejemplo y señalar el resumen, la foto con los equipos y el
+mapa de la cancha:
+
+> "Para alguien que no sabe del tema basta con esto: elegir una imagen y pulsar Analizar. Abajo, en
+> *¿Cómo se hizo?*, se ven las 7 etapas y el tema del curso que usa cada una. Cada tema se puede
+> explorar a fondo en *Temas del curso*."
+
+Abrir **ℹ️ Acerca del proyecto** y señalar la tabla del recorrido y el diagrama del pipeline.
 
 ## 0:45 – 1:45 · Arquitectura y ramificación
 

@@ -64,6 +64,9 @@ def comparacion(*args):
 def construir(estado: gr.State) -> None:
     ui.encabezado("8 · Transformers", "Detección de personas y balón con RT-DETR / DETR y comparación con el "
                                       "método clásico.")
+    ui.en_pocas_palabras("RT-DETR y DETR son modelos de inteligencia artificial ya entrenados con miles de fotos: "
+                         "encuentran personas y balones sin que les digamos de qué color son. Aquí se comparan con "
+                         "el método clásico, en aciertos y en tiempo.")
     sel = ui.selector_imagen(por_defecto=MUESTRA_REAL)
     E = sel.entradas
     if modelos.EN_ZEROGPU:

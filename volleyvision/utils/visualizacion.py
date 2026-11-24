@@ -100,27 +100,31 @@ def dibujar_puntos(img: np.ndarray, puntos, color=NARANJA, numerar: bool = True,
     return salida
 
 
-def dibujar_cancha_cenital(posiciones=(), colores=(), largo_m: float = 18.0, ancho_m: float = 9.0,
+def dibujar_cancha_cenital(posiciones=(), colores=(), ancho_m: float = 9.0, largo_m: float = 18.0,
                            px_por_m: int = 30, margen_m: float = 2.0, balon=None) -> np.ndarray:
     """Dibuja una cancha de voleibol vista desde arriba con jugadores y balón.
 
-    El eje largo (18 m) es horizontal. ``posiciones`` son coordenadas en metros
-    ``(x, y)`` con origen en la esquina superior izquierda de la cancha.
+    Orientación de la cámara trasera: ``x`` (0–9 m) de izquierda a derecha y
+    ``y`` (0–18 m) de la línea de fondo rival (arriba) a la propia (abajo); la red
+    está en ``y = 9``. ``posiciones`` son coordenadas ``(x, y)`` en metros.
     """
-    W = int((largo_m + 2 * margen_m) * px_por_m)
-    H = int((ancho_m + 2 * margen_m) * px_por_m)
+    W = int((ancho_m + 2 * margen_m) * px_por_m)
+    H = int((largo_m + 2 * margen_m) * px_por_m)
     lienzo = np.full((H, W, 3), (120, 85, 30), np.uint8)  # zona libre azul
 
     def px(x, y):
         return int(round((x + margen_m) * px_por_m)), int(round((y + margen_m) * px_por_m))
 
-    cv2.rectangle(lienzo, px(0, 0), px(largo_m, ancho_m), (60, 120, 220), -1)  # cancha naranja
+    cv2.rectangle(lienzo, px(0, 0), px(ancho_m, largo_m), (60, 120, 220), -1)  # cancha naranja
     blanco = (245, 245, 245)
-    cv2.rectangle(lienzo, px(0, 0), px(largo_m, ancho_m), blanco, 2)
-    cv2.line(lienzo, px(largo_m / 2, -0.6), px(largo_m / 2, ancho_m + 0.6), (40, 40, 40), 4)  # red
-    cv2.line(lienzo, px(largo_m / 2, 0), px(largo_m / 2, ancho_m), blanco, 2)
-    for x in (largo_m / 2 - 3, largo_m / 2 + 3):  # líneas de ataque
-        cv2.line(lienzo, px(x, 0), px(x, ancho_m), blanco, 2)
+    cv2.rectangle(lienzo, px(0, 0), px(ancho_m, largo_m), blanco, 2)
+    cv2.line(lienzo, px(-0.6, largo_m / 2), px(ancho_m + 0.6, largo_m / 2), (40, 40, 40), 4)  # red
+    cv2.line(lienzo, px(0, largo_m / 2), px(ancho_m, largo_m / 2), blanco, 2)
+    for y in (largo_m / 2 - 3, largo_m / 2 + 3):  # líneas de ataque
+        cv2.line(lienzo, px(0, y), px(ancho_m, y), blanco, 2)
+    cv2.putText(lienzo, "rival", px(0.2, -0.5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, blanco, 1, cv2.LINE_AA)
+    cv2.putText(lienzo, "propio (camara)", px(0.2, largo_m + 1.2), cv2.FONT_HERSHEY_SIMPLEX, 0.5, blanco, 1,
+                cv2.LINE_AA)
     for i, (x, y) in enumerate(posiciones):
         color = colores[i] if i < len(colores) else NARANJA
         cv2.circle(lienzo, px(x, y), 9, GRAFITO, -1)

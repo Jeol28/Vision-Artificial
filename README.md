@@ -1,3 +1,17 @@
+---
+title: VolleyVision
+emoji: 🏐
+colorFrom: red
+colorTo: gray
+sdk: gradio
+sdk_version: 6.32.0
+python_version: "3.12"
+app_file: app.py
+pinned: false
+license: mit
+short_description: Pipeline de visión por computador para voleibol
+---
+
 # 🏐 VolleyVision
 
 **Proyecto final – Visión Artificial** · Ingeniería de Sistemas, Pontificia Universidad Javeriana
@@ -20,6 +34,7 @@ clásicas con **modelos transformer** de Hugging Face (RT-DETR, DETR, SegFormer 
 - [Capturas](#capturas)
 - [Instalación](#instalación)
 - [Cómo ejecutar](#cómo-ejecutar)
+- [Despliegue en Hugging Face Spaces (ZeroGPU)](#despliegue-en-hugging-face-spaces-zerogpu)
 - [Estrategia de ramificación](#estrategia-de-ramificación)
 - [Arquitectura](#arquitectura)
 - [Módulos](#módulos)
@@ -73,16 +88,47 @@ python scripts/download_samples.py     # descarga fotos reales con licencia libr
 ## Cómo ejecutar
 
 ```bash
-streamlit run volleyvision/ui/app.py
+python app.py
 ```
 
-Se abre en `http://localhost:8501`. Recorrido sugerido: **1 · Calibración** (pulsar *Calibrar
-cámara* y marcar las 4 esquinas de la media cancha propia en la pestaña *Homografía*) → páginas 2 a 8 →
-**9 · Pipeline**.
+Se abre en `http://127.0.0.1:7860`. La interfaz está hecha con **Gradio** y tiene una pestaña por tema.
+Recorrido sugerido: **1 · Calibración** (pulsar *Calibrar cámara* y marcar las 4 esquinas de la media
+cancha propia en la subpestaña *Homografía*) → pestañas 2 a 8 → **9 · Pipeline**.
 
-Cada página tiene la carga de imagen (ejemplo, archivo propio o un frame de video), sliders para los
+Cada pestaña tiene la carga de imagen (ejemplo, archivo propio o un frame de video), sliders para los
 parámetros, el resultado al lado de la original y un desplegable **"¿Qué está pasando?"** con la teoría
-y las fórmulas.
+y las fórmulas. Las esquinas marcadas y la calibración se guardan en la sesión y las usan las pestañas
+de Caracterización y Pipeline.
+
+## Despliegue en Hugging Face Spaces (ZeroGPU)
+
+La app está preparada para un Space de Gradio con **ZeroGPU** (GPU compartida que se asigna solo
+mientras corre una inferencia). La cabecera YAML al inicio de este README es la configuración del Space.
+
+1. Crear el Space en <https://huggingface.co/new-space>: SDK **Gradio**, hardware **ZeroGPU**
+   (requiere una cuenta PRO o de organización).
+2. Subir el repositorio (la herramienta `hf` maneja sola los archivos binarios: JPG, PNG y MP4):
+
+   ```bash
+   pip install -U huggingface_hub
+   hf auth login
+   hf upload <usuario>/volleyvision . . --repo-type=space \
+       --exclude ".venv/*" ".git/*" "**/__pycache__/*" ".pytest_cache/*" ".gradio/*"
+   ```
+
+Cómo funciona ZeroGPU en el código (`volleyvision/ui/modelos.py`):
+
+- `app.py` importa `spaces` antes que torch y, si detecta ZeroGPU (`SPACES_ZERO_GPU`), **carga los 5
+  modelos al arrancar** y los mueve a `cuda`, como exige ZeroGPU.
+- La inferencia está en funciones con `@spaces.GPU` (`detectar`, `segmentar_semantica`,
+  `segmentar_con_sam`, `comparar`, `pipeline_con_modelos`). Solo esas piden GPU; las técnicas clásicas
+  corren en CPU y no gastan cuota.
+- Cada llamada puede caer en una GPU distinta, así que los detectores se calientan dentro de la llamada
+  antes de medir el tiempo.
+- Fuera de ZeroGPU, `@spaces.GPU` no hace nada y los modelos se cargan la primera vez que se usan.
+
+Los visitantes tienen una cuota diaria de GPU (mayor si inician sesión en Hugging Face). Si el Space
+lleva tiempo sin visitas se duerme y la primera visita tarda en arrancar.
 
 ---
 
@@ -94,7 +140,7 @@ Se usa un flujo tipo **Git Flow simplificado**:
 |---|---|
 | `main` | Versión estable y entregable. Solo recibe merges desde `develop` y se etiqueta (`v1.0.0`). |
 | `develop` | Rama de integración: aquí se juntan los módulos terminados y probados. |
-| `feature/<tema>` | Una rama por módulo del curso: `feature/calibracion`, `feature/filtros`, `feature/histogramas`, `feature/umbralizacion`, `feature/morfologia`, `feature/segmentacion`, `feature/caracterizacion`, `feature/transformers`, `feature/ui` (y `feature/docs` para la documentación). Los cambios posteriores siguen el mismo flujo: `feature/camara-trasera` cambió la cámara a la vista trasera (`v1.1.0`). |
+| `feature/<tema>` | Una rama por módulo del curso: `feature/calibracion`, `feature/filtros`, `feature/histogramas`, `feature/umbralizacion`, `feature/morfologia`, `feature/segmentacion`, `feature/caracterizacion`, `feature/transformers`, `feature/ui` (y `feature/docs` para la documentación). Los cambios posteriores siguen el mismo flujo: `feature/camara-trasera` cambió la cámara a la vista trasera (`v1.1.0`) y `feature/gradio-zerogpu` pasó la interfaz a Gradio con ZeroGPU (`v2.0.0`). |
 
 Reglas:
 
@@ -184,6 +230,15 @@ gitGraph
     merge feature/camara-trasera
     checkout main
     merge develop tag: "v1.1.0"
+    checkout develop
+    branch feature/gradio-zerogpu
+    checkout feature/gradio-zerogpu
+    commit id: "feat(ui): Gradio + ZeroGPU"
+    commit id: "docs: Gradio y despliegue"
+    checkout develop
+    merge feature/gradio-zerogpu
+    checkout main
+    merge develop tag: "v2.0.0"
 ```
 
 Para ver el historial real: `git log --oneline --graph --all`.
@@ -199,11 +254,11 @@ El código se organiza en tres capas con dependencias en un solo sentido
 
 ```mermaid
 flowchart TB
-    subgraph UI["Capa de presentación · volleyvision/ui (Streamlit)"]
+    subgraph UI["Capa de presentación · volleyvision/ui (Gradio)"]
         direction LR
-        APP["app.py<br/>navegación"] ~~~ PAG["paginas/<br/>0_inicio … 9_pipeline"] ~~~ COMP["componentes.py<br/>imagen/video, esquinas por clic"] ~~~ MOD["modelos.py<br/>st.cache_resource"]
+        APP["app.py<br/>pestañas y estado"] ~~~ PAG["paginas/<br/>p0_inicio … p9_pipeline"] ~~~ COMP["componentes.py<br/>imagen/video, esquinas por clic"] ~~~ MOD["modelos.py<br/>carga única + @spaces.GPU"]
     end
-    subgraph CORE["Capa de dominio · volleyvision/core (funciones puras, sin Streamlit)"]
+    subgraph CORE["Capa de dominio · volleyvision/core (funciones puras, sin Gradio)"]
         direction LR
         C1["calibracion<br/>filtros<br/>histogramas"] ~~~ C2["umbralizacion<br/>morfologia<br/>segmentacion"] ~~~ C3["caracterizacion<br/>transformers_models<br/>pipeline"]
     end
@@ -221,10 +276,11 @@ flowchart TB
 ```
 
 - **`core/`**: un módulo por tema del curso. Todas las funciones son **puras**: reciben una imagen
-  (arreglo NumPy BGR `uint8`) y parámetros, y devuelven imágenes y/o datos. No importan Streamlit, así
+  (arreglo NumPy BGR `uint8`) y parámetros, y devuelven imágenes y/o datos. No importan Gradio, así
   que se prueban con `pytest` y se pueden usar desde un script o un cuaderno.
-- **`ui/`**: Streamlit. Solo recoge parámetros con widgets, llama al core y muestra resultados. Los
-  modelos se cargan **una vez** por proceso con `st.cache_resource` (`ui/modelos.py`).
+- **`ui/`**: Gradio. Solo recoge parámetros con widgets, llama al core y muestra resultados. Los
+  modelos se cargan **una vez** por proceso (`ui/modelos.py`) y la inferencia va en funciones
+  `@spaces.GPU` para ZeroGPU.
 - **`utils/`**: E/S de imágenes y video, dibujo con la paleta del proyecto y generación de datos
   sintéticos con verdad conocida (para pruebas y demos sin internet).
 
@@ -256,15 +312,15 @@ VolleyVision/
 │   │   ├── umbralizacion.py  ├── morfologia.py      ├── segmentacion.py
 │   │   ├── caracterizacion.py├── transformers_models.py
 │   │   └── pipeline.py
-│   ├── ui/                   # Streamlit
+│   ├── ui/                   # Gradio
 │   │   ├── app.py  ├── componentes.py  ├── modelos.py
-│   │   └── paginas/  0_inicio.py … 9_pipeline.py
+│   │   └── paginas/  p0_inicio.py … p9_pipeline.py
 │   └── utils/                # io.py, visualizacion.py, sinteticos.py
 ├── data/samples/             # cancha y video sintéticos, tablero (descargadas/ se ignora)
 ├── scripts/                  # generar_sinteticos.py, download_samples.py
-├── tests/                    # pytest (79 pruebas)
+├── tests/                    # pytest (98 pruebas)
 ├── docs/                     # arquitectura, guion del video, capturas
-├── .streamlit/config.toml    # tema: grafito, naranja y neutro
+├── app.py                    # punto de entrada (local y Hugging Face Spaces)
 ├── requirements.txt  ├── pytest.ini  ├── LICENSE  └── README.md
 ```
 
@@ -298,7 +354,7 @@ VolleyVision/
 
 Tiempos de referencia de la red sola, después del calentamiento, en una imagen de 960 px (Apple
 Silicon con MPS): RT-DETR ≈ 90 ms, DETR ≈ 150–260 ms, SegFormer-B0 ≈ 15–55 ms, SlimSAM ≈ 0.5 s,
-SAM ViT-B ≈ 0.7 s. En CPU son entre 2 y 10 veces mayores. La página **8 · Transformers** mide y
+SAM ViT-B ≈ 0.7 s. En CPU son entre 2 y 10 veces mayores. La pestaña **8 · Transformers** mide y
 compara los tiempos en tu máquina.
 
 ---
@@ -306,7 +362,7 @@ compara los tiempos en tu máquina.
 ## Pruebas
 
 ```bash
-pytest                 # 76 pruebas rápidas (sin descargar modelos)
+pytest                 # 95 pruebas rápidas (sin descargar modelos)
 pytest -m slow         # 3 pruebas que descargan y ejecutan los modelos de Hugging Face
 ```
 
@@ -322,7 +378,8 @@ Qué se verifica, entre otras cosas:
 - La homografía de la media cancha ubica al equipo propio con error < 10 cm y al rival con error < 40 cm.
 - El pipeline clásico encuentra ≥ 7 de los 12 jugadores sintéticos (la vista trasera tiene oclusiones),
   el balón y los dos equipos.
-- Cada página de la UI se ejecuta sin excepciones (`streamlit.testing`).
+- La app de Gradio se construye y cada callback de la UI se ejecuta sin excepciones con la escena
+  sintética (sin levantar el servidor).
 
 ---
 

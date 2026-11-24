@@ -23,7 +23,7 @@ with c1:
         """
 | Página | Qué hace con el voleibol |
 |---|---|
-| 1 · Calibración | Matriz K, distorsión, error de reproyección y vista cenital de la cancha |
+| 1 · Calibración | Matriz K, distorsión, error de reproyección y vista cenital desde la cámara trasera |
 | 2 · Filtros | Suavizado, bordes, convolución manual y realce de las líneas |
 | 3 · Histogramas | RGB/HSV, ecualización, CLAHE y comparación de uniformes |
 | 4 · Umbralización | Global, Otsu manual, adaptativo y rangos HSV (balón, cancha) |

@@ -7,7 +7,7 @@ from volleyvision.utils import io, sinteticos
 from volleyvision.utils import visualizacion as vis
 
 ui.encabezado("1 · Modelos de cámara y calibración",
-              "Calibración intrínseca con tablero de ajedrez y homografía de la cancha (9 × 18 m).")
+              "Calibración intrínseca con tablero de ajedrez y homografía de la cancha desde la cámara trasera.")
 
 tab_intr, tab_hom = st.tabs(["Calibración intrínseca", "Homografía de la cancha"])
 
@@ -106,20 +106,26 @@ with tab_hom:
             ui.mostrar(cal.vista_cenital(img, hom), "Vista cenital (cv2.warpPerspective)")
             st.markdown("**Homografía imagen → metros**")
             st.code(np.array2string(hom.H_metros, precision=5, suppress_small=True))
-            H_dlt = cal.homografia_dlt(esquinas, [[0, 0], [18, 0], [18, 9], [0, 9]])
+            H_dlt = cal.homografia_dlt(esquinas, cal.ESQUINAS_MEDIA_CANCHA_M)
             st.caption(f"DLT propio vs OpenCV: diferencia máx. = {np.abs(H_dlt - hom.H_metros / hom.H_metros[2, 2]).max():.2e}")
         else:
-            st.info("Marca las 4 esquinas para ver la cancha desde arriba. "
+            st.info("Marca las 4 esquinas de tu media cancha para ver la cancha desde arriba. "
                     "Quedan guardadas para las páginas de Caracterización y Pipeline.")
 
     ui.que_esta_pasando(r"""
+**Cámara trasera.** La cámara está detrás de tu línea de fondo y ve las 4 esquinas de **tu media
+cancha** (9 × 9 m): las dos de la línea central, bajo la red, y las dos de tu línea de fondo.
+
 **Homografía.** El piso es un plano, así que píxeles y metros se relacionan con una matriz $3\times3$:
 
 $$\lambda \begin{bmatrix} X \\ Y \\ 1 \end{bmatrix} = H \begin{bmatrix} u \\ v \\ 1 \end{bmatrix}$$
 
-$H$ tiene 8 grados de libertad: cada esquina aporta 2 ecuaciones, por eso bastan **4 esquinas**
-de la cancha (0,0), (18,0), (18,9), (0,9). Se resuelve con DLT (vector singular de menor valor de
-$A h = 0$) y `cv2.warpPerspective` remuestrea la imagen en la vista cenital.
+$H$ tiene 8 grados de libertad: cada esquina aporta 2 ecuaciones, por eso bastan las **4 esquinas
+de la media cancha**, que en metros son (0, 9), (9, 9), (9, 18) y (0, 18): $x$ va de izquierda a
+derecha y $y$ desde la línea de fondo rival (0) hasta la tuya (18), con la red en $y = 9$. Se resuelve
+con DLT (vector singular de menor valor de $A h = 0$) y `cv2.warpPerspective` remuestrea la imagen.
+La homografía vale para **todo** el plano del piso, así que también ubica a los rivales al otro lado de
+la red, aunque con menos precisión porque están más lejos (cada píxel abarca más metros).
 
 Solo los puntos **sobre el piso** se proyectan bien: por eso de los jugadores se usa el punto de los
 pies, no el centroide. Código: `core/calibracion.py` → `homografia_cancha`, `homografia_dlt`, `vista_cenital`.

@@ -98,7 +98,7 @@ umbrales para ver cómo cambian los aciertos.
 with tab_mapa:
     esquinas = ui.esquinas_de(nombre)
     if esquinas is None:
-        st.info("Primero marca las 4 esquinas de la cancha para esta imagen.")
+        st.info("Primero marca las 4 esquinas de tu media cancha para esta imagen.")
         esquinas = ui.selector_esquinas(img, nombre, "car_esq")
     if esquinas is not None:
         hom = cal.homografia_cancha(esquinas)

@@ -17,6 +17,8 @@ short_description: Pipeline de visión por computador para voleibol
 **Proyecto final – Visión Artificial** · Ingeniería de Sistemas, Pontificia Universidad Javeriana
 **Autor:** Jorge Enrique Olaya Liévano
 
+> **App en línea:** [huggingface.co/spaces/Jeol28/Vision](https://huggingface.co/spaces/Jeol28/Vision) (Hugging Face Spaces con ZeroGPU). Si el Space estaba dormido, la primera carga tarda un par de minutos.
+
 VolleyVision analiza fotos y video de un partido de voleibol con un **pipeline de visión por computador**.
 La cámara se ubica **detrás de la línea de fondo del equipo propio** (vista trasera), de modo que se
 ve al equipo propio de espaldas, con el número de la camiseta visible, y al rival de frente al otro lado
@@ -48,28 +50,27 @@ clásicas con **modelos transformer** de Hugging Face (RT-DETR, DETR, SegFormer 
 
 ## Capturas
 
-<!-- Reemplazar cada placeholder por la imagen, p. ej.: ![Inicio](docs/capturas/inicio.png) -->
+Inicio, Calibración y Transformers se tomaron del Space desplegado (los tiempos de RT-DETR y DETR son
+en la GPU de ZeroGPU); la del Pipeline, de la app local con el mismo código.
 
 | Inicio | Calibración y homografía |
 |---|---|
-| _Captura pendiente: `docs/capturas/inicio.png`_ | _Captura pendiente: `docs/capturas/calibracion.png`_ |
-| **Transformers (clásico vs. RT-DETR vs. DETR)** | **Pipeline completo** |
-| _Captura pendiente: `docs/capturas/transformers.png`_ | _Captura pendiente: `docs/capturas/pipeline.png`_ |
-
-> Lista de capturas sugeridas en [docs/capturas/README.md](docs/capturas/README.md).
+| ![Inicio](docs/capturas/inicio.png) | ![Homografía de la media cancha y vista cenital](docs/capturas/calibracion.png) |
+| **Transformers (clásico vs. RT-DETR vs. DETR)** | **Pipeline completo (mapa cenital)** |
+| ![Comparación clásico vs. transformer](docs/capturas/transformers.png) | ![Pipeline: paso 7, mapa cenital](docs/capturas/pipeline.png) |
 
 ---
 
 ## Instalación
 
-Requisitos: **Python 3.11** y ~2 GB libres para los pesos de los modelos (se descargan la primera vez
+Requisitos: **Python 3.11 o superior** (probado con 3.11 en local y 3.12 en el Space) y ~2 GB libres para los pesos de los modelos (se descargan la primera vez
 que se usan, en la caché de Hugging Face, no en el repositorio).
 
 ```bash
 git clone <url-del-repositorio> VolleyVision
 cd VolleyVision
 
-python3.11 -m venv .venv
+python3 -m venv .venv               # Python 3.11 o superior
 source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install --upgrade pip
 pip install -r requirements.txt
@@ -126,6 +127,8 @@ Cómo funciona ZeroGPU en el código (`volleyvision/ui/modelos.py`):
 - Cada llamada puede caer en una GPU distinta, así que los detectores se calientan dentro de la llamada
   antes de medir el tiempo.
 - Fuera de ZeroGPU, `@spaces.GPU` no hace nada y los modelos se cargan la primera vez que se usan.
+- Cada función reserva poca GPU (15–30 s): ZeroGPU descuenta la reserva de la cuota del visitante
+  antes de ejecutar, y con reservas grandes un visitante sin sesión se queda sin cuota enseguida.
 
 Los visitantes tienen una cuota diaria de GPU (mayor si inician sesión en Hugging Face). Si el Space
 lleva tiempo sin visitas se duerme y la primera visita tarda en arrancar.
@@ -138,7 +141,7 @@ Se usa un flujo tipo **Git Flow simplificado**:
 
 | Rama | Propósito |
 |---|---|
-| `main` | Versión estable y entregable. Solo recibe merges desde `develop` y se etiqueta (`v1.0.0`). |
+| `main` | Versión estable y entregable. Solo recibe merges desde `develop` y se etiqueta en cada versión (`v1.0.0`, `v1.1.0`, `v2.0.0`, `v2.0.1`). |
 | `develop` | Rama de integración: aquí se juntan los módulos terminados y probados. |
 | `feature/<tema>` | Una rama por módulo del curso: `feature/calibracion`, `feature/filtros`, `feature/histogramas`, `feature/umbralizacion`, `feature/morfologia`, `feature/segmentacion`, `feature/caracterizacion`, `feature/transformers`, `feature/ui` (y `feature/docs` para la documentación). Los cambios posteriores siguen el mismo flujo: `feature/camara-trasera` cambió la cámara a la vista trasera (`v1.1.0`) y `feature/gradio-zerogpu` pasó la interfaz a Gradio con ZeroGPU (`v2.0.0`). |
 
@@ -239,6 +242,15 @@ gitGraph
     merge feature/gradio-zerogpu
     checkout main
     merge develop tag: "v2.0.0"
+    checkout develop
+    branch feature/docs-entrega
+    checkout feature/docs-entrega
+    commit id: "fix(ui): cuota ZeroGPU"
+    commit id: "docs: capturas y enlace"
+    checkout develop
+    merge feature/docs-entrega
+    checkout main
+    merge develop tag: "v2.0.1"
 ```
 
 Para ver el historial real: `git log --oneline --graph --all`.

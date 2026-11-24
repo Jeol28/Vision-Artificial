@@ -22,3 +22,7 @@ data/samples/descargadas/
 .DS_Store
 .vscode/
 .idea/
+
+# Gradio (caché de archivos temporales)
+.gradio/
+flagged/

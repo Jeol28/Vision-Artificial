@@ -11,9 +11,10 @@ torchvision>=0.17
 transformers>=4.45
 timm>=0.9          # requerido por facebook/detr-resnet-50
 
-# Interfaz
-streamlit>=1.40
-streamlit-image-coordinates>=0.1.9
+# Interfaz (Gradio) y ZeroGPU de Hugging Face Spaces
+gradio>=6.0
+spaces>=0.40       # decorador @spaces.GPU; fuera de ZeroGPU no hace nada
+pandas>=2.0
 
 # Utilidades y pruebas
 requests>=2.31

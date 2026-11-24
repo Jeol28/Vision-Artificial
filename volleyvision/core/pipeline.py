@@ -88,7 +88,7 @@ def ejecutar_pipeline(img: np.ndarray, config: ConfigPipeline | None = None,
         nota = "Distorsión de lente corregida con la calibración cargada."
     else:
         corregida = img.copy()
-        nota = "Sin calibración: se usa la imagen tal cual (calibra en la página de Calibración)."
+        nota = "Sin calibración: se usa la imagen tal cual (calibra en la pestaña de Calibración)."
     pasos.append(Paso("1. Corrección de distorsión", {"Entrada": img, "Corregida": corregida},
                       tiempo_ms=t(), nota=nota))
 

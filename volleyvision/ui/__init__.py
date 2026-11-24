@@ -1,1 +1,1 @@
-"""Capa de presentación (Streamlit)."""
+"""Capa de presentación (Gradio)."""

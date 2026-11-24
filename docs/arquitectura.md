@@ -4,16 +4,16 @@
 
 | Capa | Paquete | Responsabilidad | Puede importar |
 |---|---|---|---|
-| Presentación | `volleyvision/ui` | Widgets de Streamlit, navegación, caché de modelos, mostrar resultados | `core`, `utils`, `streamlit` |
+| Presentación | `volleyvision/ui` | Widgets de Gradio, pestañas, estado de la sesión, carga de modelos e inferencia en GPU (ZeroGPU), mostrar resultados | `core`, `utils`, `gradio`, `spaces` |
 | Dominio | `volleyvision/core` | Algoritmos de visión como **funciones puras** (un módulo por tema) | `utils`, OpenCV, NumPy, scikit-image, torch, transformers |
 | Utilidades | `volleyvision/utils` | E/S de imágenes y video, dibujo, datos sintéticos | OpenCV, NumPy, Matplotlib |
 
 Las dependencias van en un solo sentido: **ui → core → utils**. Ningún archivo de `core/` importa
-Streamlit, y eso es lo que permite:
+Gradio, y eso es lo que permite:
 
 - probar todo el procesamiento con `pytest` sin levantar la app;
 - reutilizar el core desde scripts (por ejemplo `scripts/generar_sinteticos.py`) o cuadernos;
-- cambiar la interfaz (por ejemplo a Gradio o una API REST) sin tocar los algoritmos.
+- cambiar la interfaz sin tocar los algoritmos: la v2.0.0 pasó de Streamlit a Gradio sin modificar el core.
 
 ### Convenciones
 
@@ -57,11 +57,13 @@ sequenceDiagram
 | Implementaciones manuales junto a las de OpenCV (convolución, Otsu, ecualización, erosión/dilatación, DLT, proyección pinhole) | Muestran la teoría del curso y las pruebas comparan ambas versiones. |
 | RT-DETR por defecto y DETR como opción | RT-DETR es más rápido y preciso; DETR es el modelo original y sirve de referencia en la comparación de tiempos. |
 | SlimSAM por defecto y SAM ViT-B como opción | SlimSAM es viable en CPU (~28 M parámetros frente a ~94 M). |
-| `st.cache_resource` en `ui/modelos.py` (no en el core) | El core sigue sin depender de Streamlit; la caché vive en la capa de presentación. Además se hace una inferencia de calentamiento para que la comparación de tiempos sea justa. |
+| Carga única de modelos en `ui/modelos.py` (no en el core) | El core sigue sin depender de la interfaz; la caché vive en la capa de presentación. Además se hace una inferencia de calentamiento para que la comparación de tiempos sea justa. |
+| Gradio con **ZeroGPU** (Hugging Face Spaces) | ZeroGPU solo existe para Gradio. Los modelos se cargan al arrancar (requisito de ZeroGPU) y la inferencia va en funciones `@spaces.GPU`, que devuelven solo datos serializables (NumPy y diccionarios). Las técnicas clásicas corren en CPU y no gastan cuota de GPU. Fuera de un Space, `@spaces.GPU` no hace nada. |
+| Estado de la sesión en un `gr.State` | Las esquinas marcadas (por escena) y la calibración se comparten entre pestañas sin variables globales, así cada visitante tiene las suyas. |
 | Selección automática de dispositivo (`cuda` → `mps` → `cpu`) y sincronización antes de medir | Los tiempos en GPU son asíncronos; sin sincronizar se medirían mal. En MPS se convierten las entradas float64 a float32. |
 | Punto de apoyo (centro inferior de la caja) para el mapa cenital | La homografía solo es válida para puntos del plano del piso. |
 | Homografía a partir de la **media cancha propia** (cámara trasera) | Desde detrás de la línea de fondo se ven bien las 4 esquinas de la media cancha propia; la homografía resultante vale para todo el plano del piso, así que también ubica al rival (con menos precisión). Coordenadas: x de 0 a 9 m (izquierda → derecha), y de 0 m (fondo rival) a 18 m (fondo propio). |
-| Páginas con prefijo numérico (`8_transformers.py`) | Streamlit agrega la carpeta del script a `sys.path`; una página llamada `transformers.py` ocultaría la librería `transformers`. |
+| Páginas con prefijo `pN_` (`p8_transformers.py`) | Ordenan las pestañas y evitan que un módulo llamado `transformers.py` se confunda con la librería `transformers`. |
 
 ## 4. Pruebas
 
@@ -75,4 +77,4 @@ sequenceDiagram
 | `tests/test_segmentacion.py` | Contornos, watershed, k-means, jugadores clásicos, IoU |
 | `tests/test_caracterizacion.py` | Descriptores vs. scikit-image, invariancia de Hu, clasificación del balón, proyección |
 | `tests/test_transformers.py` | Pipeline completo, con calibración y sin esquinas; modelos reales (`-m slow`) |
-| `tests/test_ui.py` | Cada página de Streamlit se ejecuta sin excepciones |
+| `tests/test_ui.py` | La app de Gradio se construye y cada callback de la UI corre sin excepciones (calibración, esquinas, pipeline); modelos reales con `-m slow` |

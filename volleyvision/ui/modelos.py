@@ -1,50 +1,121 @@
-"""Carga de modelos transformer con ``st.cache_resource``.
+"""Carga de los modelos transformer e inferencia compatible con ZeroGPU.
 
-Cada modelo se descarga (la primera vez) y se carga en memoria **una sola vez**
-por proceso de Streamlit; todas las páginas y sesiones lo reutilizan.
+**ZeroGPU** (Hugging Face Spaces) asigna una GPU solo mientras se ejecuta una
+función decorada con ``@spaces.GPU``. Sus reglas:
+
+* los modelos se cargan **al arrancar** el proceso y se mueven a ``cuda`` ahí
+  mismo (ZeroGPU los empaqueta y los lleva a la GPU en cada llamada);
+* la inferencia va dentro de funciones ``@spaces.GPU``; lo que devuelven debe
+  poder serializarse (aquí: diccionarios con NumPy, nunca tensores ni modelos).
+
+Fuera de un Space con ZeroGPU, ``spaces.GPU`` no hace nada y los modelos se
+cargan la primera vez que se usan (GPU NVIDIA, GPU Apple o CPU). En los dos
+casos cada modelo se carga **una sola vez** por proceso.
 """
 
 from __future__ import annotations
 
-import streamlit as st
+import os
+import threading
 
+from volleyvision.core import pipeline as pl
 from volleyvision.core import transformers_models as tm
 
+try:  # en un Space, ``spaces`` debe importarse antes que torch (lo hace app.py)
+    import spaces
 
-@st.cache_resource(show_spinner=False)
-def detector(id_hf: str) -> tm.ModeloCargado:
-    modelo = tm.cargar_detector(id_hf)
-    tm.calentar(modelo)  # la primera inferencia es más lenta: no debe contar en la comparación
-    return modelo
+    GPU = spaces.GPU
+except ImportError:  # pragma: no cover - sin el paquete ``spaces`` el decorador no hace nada
+    def GPU(funcion=None, **_):
+        return funcion if callable(funcion) else (lambda f: f)
 
+EN_ZEROGPU = os.environ.get("SPACES_ZERO_GPU", "").lower() in ("1", "t", "true")
 
-@st.cache_resource(show_spinner=False)
-def segformer() -> tm.ModeloCargado:
-    return tm.cargar_segformer()
-
-
-@st.cache_resource(show_spinner=False)
-def sam(id_hf: str) -> tm.ModeloCargado:
-    return tm.cargar_sam(id_hf)
+_cache: dict[str, tm.ModeloCargado] = {}
+_candado = threading.Lock()
 
 
-def obtener_detector(nombre: str) -> tm.ModeloCargado:
+def _obtener(clave: str, cargar) -> tm.ModeloCargado:
+    with _candado:
+        if clave not in _cache:
+            _cache[clave] = cargar()
+        return _cache[clave]
+
+
+def detector(nombre: str) -> tm.ModeloCargado:
+    """RT-DETR o DETR por su nombre en ``tm.MODELOS_DETECCION``."""
     id_hf = tm.MODELOS_DETECCION[nombre]
-    with st.spinner(f"Cargando {id_hf} (la primera vez se descarga de Hugging Face)…"):
-        return detector(id_hf)
+
+    def cargar():
+        m = tm.cargar_detector(id_hf)
+        if not EN_ZEROGPU:  # con ZeroGPU se calienta dentro de cada llamada en GPU
+            tm.calentar(m)  # la primera inferencia es más lenta: no debe contar en la comparación
+        return m
+
+    return _obtener(id_hf, cargar)
 
 
-def obtener_segformer() -> tm.ModeloCargado:
-    with st.spinner(f"Cargando {tm.MODELO_SEGFORMER}…"):
-        return segformer()
+def segformer() -> tm.ModeloCargado:
+    return _obtener(tm.MODELO_SEGFORMER, tm.cargar_segformer)
 
 
-def obtener_sam(nombre: str) -> tm.ModeloCargado:
+def sam(nombre: str) -> tm.ModeloCargado:
     id_hf = tm.MODELOS_SAM[nombre]
-    with st.spinner(f"Cargando {id_hf}…"):
-        return sam(id_hf)
+    return _obtener(id_hf, lambda: tm.cargar_sam(id_hf))
 
 
-def selector_detector(clave: str) -> str:
-    """Selectbox de detector con RT-DETR por defecto."""
-    return st.selectbox("Detector transformer", list(tm.MODELOS_DETECCION), index=0, key=clave)
+def precargar() -> None:
+    """Carga todos los modelos al arrancar (obligatorio con ZeroGPU)."""
+    for nombre in tm.MODELOS_DETECCION:
+        detector(nombre)
+    segformer()
+    for nombre in tm.MODELOS_SAM:
+        sam(nombre)
+
+
+def info(m: tm.ModeloCargado) -> str:
+    """Línea con el enlace, el tamaño y el dispositivo del modelo."""
+    disp = "GPU ZeroGPU (cuda)" if EN_ZEROGPU else m.dispositivo
+    return f"[{m.id_hf}]({m.enlace}) · {m.n_parametros / 1e6:.1f} M parámetros · {disp}"
+
+
+def _calentar_en_gpu(det: tm.ModeloCargado) -> None:
+    # Con ZeroGPU cada llamada puede caer en una GPU distinta: se calienta antes de medir.
+    if EN_ZEROGPU:
+        tm.calentar(det)
+
+
+# --------------------------------------------------------------------------
+# Inferencia (estas funciones usan la GPU de ZeroGPU cuando existe)
+# --------------------------------------------------------------------------
+@GPU(duration=60)
+def detectar(img, nombre: str, umbral: float) -> dict:
+    det = detector(nombre)
+    _calentar_en_gpu(det)
+    return tm.detectar_objetos(img, det, umbral)
+
+
+@GPU(duration=60)
+def segmentar_semantica(img) -> dict:
+    return tm.segmentar_semantica(img, segformer())
+
+
+@GPU(duration=60)
+def segmentar_con_sam(img, nombre: str, punto=None, caja=None) -> dict:
+    return tm.segmentar_con_sam(img, sam(nombre), punto=punto, caja=caja)
+
+
+@GPU(duration=120)
+def comparar(img, nombres: list[str], umbral: float, verdad=None) -> dict:
+    detectores = {n: detector(n) for n in nombres}
+    for d in detectores.values():
+        _calentar_en_gpu(d)
+    return tm.comparar_metodos(img, detectores, umbral, verdad)
+
+
+@GPU(duration=120)
+def pipeline_con_modelos(img, cfg: pl.ConfigPipeline, nombre_det: str | None, usar_seg: bool):
+    det = detector(nombre_det) if nombre_det else None
+    if det is not None:
+        _calentar_en_gpu(det)
+    return pl.ejecutar_pipeline(img, cfg, det, segformer() if usar_seg else None)

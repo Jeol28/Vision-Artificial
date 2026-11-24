@@ -1,47 +1,48 @@
-"""Punto de entrada de la UI.
+"""Construcción de la interfaz de VolleyVision (Gradio).
 
-Ejecutar desde la raíz del repositorio:
+Ejecutar desde la raíz del repositorio::
 
-    streamlit run volleyvision/ui/app.py
+    python app.py
+
+En Hugging Face Spaces (ZeroGPU) se ejecuta el mismo ``app.py`` de la raíz.
 """
 
-import sys
-from pathlib import Path
+from __future__ import annotations
 
-RAIZ = Path(__file__).resolve().parents[2]
-if str(RAIZ) not in sys.path:
-    sys.path.insert(0, str(RAIZ))
+import gradio as gr
 
-import streamlit as st  # noqa: E402
+from volleyvision.ui import componentes as ui
+from volleyvision.ui.paginas import (p0_inicio, p1_calibracion, p2_filtros, p3_histogramas, p4_umbralizacion,
+                                     p5_morfologia, p6_segmentacion, p7_caracterizacion, p8_transformers,
+                                     p9_pipeline)
 
-from volleyvision.ui.componentes import estilos  # noqa: E402
+PAGINAS = [
+    ("Inicio", p0_inicio),
+    ("1 · Calibración", p1_calibracion),
+    ("2 · Filtros", p2_filtros),
+    ("3 · Histogramas", p3_histogramas),
+    ("4 · Umbralización", p4_umbralizacion),
+    ("5 · Morfología", p5_morfologia),
+    ("6 · Segmentación", p6_segmentacion),
+    ("7 · Caracterización", p7_caracterizacion),
+    ("8 · Transformers", p8_transformers),
+    ("9 · Pipeline", p9_pipeline),
+]
 
-st.set_page_config(page_title="VolleyVision", page_icon="🏐", layout="wide")
-estilos()
 
-PAGINAS = Path(__file__).parent / "paginas"
+def construir_app() -> gr.Blocks:
+    """Una pestaña por tema del curso; el estado de la sesión (esquinas y calibración) se comparte."""
+    with gr.Blocks(title="VolleyVision") as demo:
+        estado = gr.State(ui.estado_nuevo())
+        with gr.Tabs():
+            for titulo, pagina in PAGINAS:
+                with gr.Tab(titulo):
+                    pagina.construir(estado)
+        gr.Markdown("<span class='vv-nota'>**VolleyVision** · Visión Artificial · Jorge Enrique Olaya Liévano · "
+                    "Pontificia Universidad Javeriana</span>")
+    return demo
 
-navegacion = st.navigation({
-    "VolleyVision": [
-        st.Page(PAGINAS / "0_inicio.py", title="Inicio", icon=":material/home:", default=True),
-    ],
-    "Temas del curso": [
-        st.Page(PAGINAS / "1_calibracion.py", title="1 · Calibración", icon=":material/photo_camera:"),
-        st.Page(PAGINAS / "2_filtros.py", title="2 · Filtros", icon=":material/blur_on:"),
-        st.Page(PAGINAS / "3_histogramas.py", title="3 · Histogramas", icon=":material/bar_chart:"),
-        st.Page(PAGINAS / "4_umbralizacion.py", title="4 · Umbralización", icon=":material/contrast:"),
-        st.Page(PAGINAS / "5_morfologia.py", title="5 · Morfología", icon=":material/category:"),
-        st.Page(PAGINAS / "6_segmentacion.py", title="6 · Segmentación", icon=":material/texture:"),
-        st.Page(PAGINAS / "7_caracterizacion.py", title="7 · Caracterización", icon=":material/straighten:"),
-    ],
-    "Integración": [
-        st.Page(PAGINAS / "8_transformers.py", title="8 · Transformers", icon=":material/neurology:"),
-        st.Page(PAGINAS / "9_pipeline.py", title="9 · Pipeline", icon=":material/account_tree:"),
-    ],
-})
 
-with st.sidebar:
-    st.markdown("**VolleyVision** · Visión Artificial")
-    st.caption("Jorge Enrique Olaya Liévano · Pontificia Universidad Javeriana")
-
-navegacion.run()
+def lanzar(demo: gr.Blocks, **kw) -> None:
+    demo.queue(default_concurrency_limit=4).launch(theme=ui.tema(), css=ui.CSS, js=ui.JS_MODO_OSCURO,
+                                                   max_file_size="200mb", **kw)

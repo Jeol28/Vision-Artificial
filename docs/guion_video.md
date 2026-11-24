@@ -2,9 +2,9 @@
 
 **Antes de grabar**
 
-- `source .venv/bin/activate && streamlit run volleyvision/ui/app.py`
-- Abrir una vez las páginas 6 (SegFormer y SlimSAM) y 8 (RT-DETR y DETR) para que los modelos ya estén
-  descargados y en caché: así los tiempos que se ven en el video son los de inferencia.
+- `source .venv/bin/activate && python app.py` (o abrir el Space de Hugging Face).
+- Ejecutar una vez SegFormer y SlimSAM (pestaña 6) y RT-DETR y DETR (pestaña 8) para que los modelos ya
+  estén descargados y cargados: así los tiempos que se ven en el video son los de inferencia.
 - Tener abiertos en el editor `README.md` y la carpeta `volleyvision/`, y una terminal con
   `git log --oneline --graph --all` listo.
 - Imagen de ejemplo principal: `cancha_sintetica.jpg`. Foto real: `voleibol_03.jpg` (o la que mejor
@@ -14,7 +14,7 @@
 
 ## 0:00 – 0:45 · Introducción
 
-**En pantalla:** página **Inicio** de la app.
+**En pantalla:** pestaña **Inicio** de la app.
 
 > "Hola, soy Jorge Enrique Olaya Liévano y este es mi proyecto final de Visión Artificial:
 > **VolleyVision**. Es una aplicación que analiza fotos y video de voleibol con un pipeline de visión
@@ -31,7 +31,7 @@ Señalar la tabla del recorrido y el diagrama del pipeline.
 **En pantalla:** `README.md` (secciones *Arquitectura* y *Estrategia de ramificación*) y la terminal.
 
 > "El código está en tres capas. En `core` cada tema es un módulo con funciones puras: reciben una
-> imagen y devuelven imágenes o datos, sin Streamlit. La UI solo llama al core, y `utils` tiene la
+> imagen y devuelven imágenes o datos, sin Gradio. La UI solo llama al core, y `utils` tiene la
 > carga de imágenes, el dibujo y un generador de escenas sintéticas con verdad conocida, que uso en
 > las pruebas."
 
@@ -39,8 +39,8 @@ Señalar la tabla del recorrido y el diagrama del pipeline.
 - Ejecutar `git log --oneline --graph --all`:
   > "Trabajé con `main` estable, `develop` de integración y una rama `feature` por módulo, con
   > Conventional Commits y merges `--no-ff`, por eso cada rama queda visible en el historial. La
-  > versión entregada tiene la etiqueta v1.0.0."
-- Ejecutar `pytest -q` y mostrar que pasan las 76 pruebas.
+  > versión entregada tiene la etiqueta v2.0.0."
+- Ejecutar `pytest -q` y mostrar que pasan las 95 pruebas.
 
 ## 1:45 – 2:45 · Calibración
 
@@ -50,7 +50,7 @@ Señalar la tabla del recorrido y el diagrama del pipeline.
 > "El modelo pinhole proyecta un punto 3D con K por [R|t]. Con varias fotos de un tablero, el método
 > de Zhang despeja K y luego minimiza el error de reproyección."
 
-**UI:** página **1 · Calibración**.
+**UI:** pestaña **1 · Calibración**.
 
 1. Pulsar *Calibrar cámara*. Mostrar K, los coeficientes de distorsión y el error RMS (< 0.5 px).
    Comparar con la K verdadera que aparece abajo.
@@ -66,7 +66,7 @@ Señalar la tabla del recorrido y el diagrama del pipeline.
 
 **Código:** `core/filtros.py` → `convolucion_manual` (las tres líneas: `np.pad`, `sliding_window_view`, `einsum`).
 
-**UI:** página **2 · Filtros**.
+**UI:** pestaña **2 · Filtros**.
 
 1. *Suavizado*: agregar ruido sal y pimienta; comparar mediana con bilateral.
 2. *Convolución manual*: elegir "Sobel X", editar un valor del kernel y mostrar que la diferencia con
@@ -77,7 +77,7 @@ Señalar la tabla del recorrido y el diagrama del pipeline.
 
 **Código:** `core/histogramas.py` → `ecualizar_manual` y `asignar_equipos`.
 
-**UI:** página **3 · Histogramas**.
+**UI:** pestaña **3 · Histogramas**.
 
 1. *Ecualización y CLAHE*: comparar las tres imágenes y la métrica "desviación del brillo entre bloques".
    > "CLAHE corrige la iluminación desigual del coliseo sin amplificar el ruido."
@@ -87,7 +87,7 @@ Señalar la tabla del recorrido y el diagrama del pipeline.
 
 **Código:** `core/umbralizacion.py` → `otsu_manual` (sumas acumuladas y la fórmula de σ²_B).
 
-**UI:** página **4 · Umbralización**.
+**UI:** pestaña **4 · Umbralización**.
 
 1. *Otsu*: curva σ²_B(t) con el T manual igual al de OpenCV.
 2. *Adaptativo* contra el global.
@@ -97,7 +97,7 @@ Señalar la tabla del recorrido y el diagrama del pipeline.
 
 **Código:** `core/morfologia.py` → `erosion_manual` (mínimo del vecindario) y `limpiar_mascara`.
 
-**UI:** página **5 · Morfología**.
+**UI:** pestaña **5 · Morfología**.
 
 1. Máscara "Jugadores" con 1–2 % de ruido: aplicar *Apertura* y mostrar cómo baja el número de
    componentes.
@@ -109,7 +109,7 @@ Señalar la tabla del recorrido y el diagrama del pipeline.
 **Código:** `core/segmentacion.py` → `watershed_distancia` y `segmentar_jugadores_clasico`;
 `core/transformers_models.py` → `segmentar_con_sam`.
 
-**UI:** página **6 · Segmentación**.
+**UI:** pestaña **6 · Segmentación**.
 
 1. *K-means*: k = 5 en Lab.
 2. *Watershed*: demo de los dos balones que se tocan: contornos encuentra 1 objeto, watershed 2.
@@ -122,7 +122,7 @@ Señalar la tabla del recorrido y el diagrama del pipeline.
 **Código:** `core/caracterizacion.py` → `describir_region` (circularidad, excentricidad con valores
 propios, solidez, Hu) y `es_balon`.
 
-**UI:** página **7 · Caracterización**.
+**UI:** pestaña **7 · Caracterización**.
 
 1. *Descriptores*: seleccionar una región y mostrar centroide, caja y envolvente convexa.
 2. *¿Es balón?*: el balón sale en verde y las camisetas azules en rojo con su motivo; bajar la
@@ -134,14 +134,17 @@ propios, solidez, Hu) y `es_balon`.
 ## 7:20 – 8:30 · Transformers: clásico vs. transformer
 
 **Código:** `core/transformers_models.py` → `detectar_objetos` y `comparar_metodos`;
-`ui/modelos.py` → `st.cache_resource`.
+`ui/modelos.py` → carga única de los modelos y funciones `@spaces.GPU` (ZeroGPU).
 
-**UI:** página **8 · Transformers**.
+**UI:** pestaña **8 · Transformers**.
 
 1. *Detección* con `voleibol_03.jpg`: RT-DETR detecta personas y el balón; cambiar a DETR.
 2. *Comparación* con la foto real: pulsar *Comparar* y mostrar las tres columnas y la gráfica de tiempos.
    > "En la foto real el método clásico confunde al público con jugadores y no encuentra el balón; los
    > transformers sí, y RT-DETR es más rápido que DETR."
+
+   Si se graba desde el Space: "Aquí los modelos corren en una GPU de ZeroGPU que Hugging Face asigna
+   solo durante la inferencia; el código está en `ui/modelos.py`, en las funciones con `@spaces.GPU`."
 3. *Comparación* con `cancha_sintetica.jpg`:
    > "Aquí pasa lo contrario: los jugadores sintéticos son figuras geométricas y los transformers
    > detectan pocos. Es un cambio de dominio, una de las limitaciones que documento en el README."
@@ -150,7 +153,7 @@ propios, solidez, Hu) y `es_balon`.
 
 **Código:** `core/pipeline.py` → `ejecutar_pipeline` (las 7 etapas y la dataclass `Paso`).
 
-**UI:** página **9 · Pipeline**.
+**UI:** pestaña **9 · Pipeline**.
 
 1. Fuente *Video (elegir frame)* → `rally_sintetico.mp4`, mover el slider de frame.
 2. Dejar **desactivada** *Corregir distorsión con la calibración* y explicar por qué:

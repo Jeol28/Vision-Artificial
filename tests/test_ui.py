@@ -124,3 +124,24 @@ def test_pagina_transformers():
     assert "Personas" in tarjetas and "huggingface.co" in info
     gal, tabla, fig, nota = p8_transformers.comparacion(*SEL, 0.5, list(p8_transformers.tm.MODELOS_DETECCION))
     assert len(gal) == 3 and "tiempo (ms)" in tabla.columns
+
+
+def test_analizar_modo_guiado():
+    from volleyvision.ui.paginas import analizar
+    estado = ui.estado_nuevo()
+    assert "✅" in analizar.estado_esquinas(*SEL, estado)  # la escena de ejemplo trae sus esquinas
+    anotada, mapa, resumen, pasos = analizar.analizar(*SEL, False, estado)
+    assert anotada.ndim == 3 and mapa is not None and len(pasos) == 7
+    assert "Se encontraron" in resumen and "Balón" in resumen and "En la cancha" in resumen
+    assert set(analizar.EXPLICACION_PASOS) == {p.nombre.split(".")[0] for p in pasos}
+
+
+def test_analizar_sin_esquinas_no_dibuja_mapa():
+    from volleyvision.ui.paginas import analizar
+    sel = ui.valores_por_defecto("voleibol_03.jpg")
+    if "voleibol_03.jpg" not in ui.io.listar_muestras():
+        pytest.skip("Faltan las fotos descargadas")
+    estado = ui.estado_nuevo()
+    assert "Sin esquinas" in analizar.estado_esquinas(*sel, estado)
+    _, mapa, resumen, _ = analizar.analizar(*sel, False, estado)
+    assert mapa is None and "En la cancha" not in resumen

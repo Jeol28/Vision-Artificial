@@ -60,6 +60,7 @@ sequenceDiagram
 | `st.cache_resource` en `ui/modelos.py` (no en el core) | El core sigue sin depender de Streamlit; la caché vive en la capa de presentación. Además se hace una inferencia de calentamiento para que la comparación de tiempos sea justa. |
 | Selección automática de dispositivo (`cuda` → `mps` → `cpu`) y sincronización antes de medir | Los tiempos en GPU son asíncronos; sin sincronizar se medirían mal. En MPS se convierten las entradas float64 a float32. |
 | Punto de apoyo (centro inferior de la caja) para el mapa cenital | La homografía solo es válida para puntos del plano del piso. |
+| Homografía a partir de la **media cancha propia** (cámara trasera) | Desde detrás de la línea de fondo se ven bien las 4 esquinas de la media cancha propia; la homografía resultante vale para todo el plano del piso, así que también ubica al rival (con menos precisión). Coordenadas: x de 0 a 9 m (izquierda → derecha), y de 0 m (fondo rival) a 18 m (fondo propio). |
 | Páginas con prefijo numérico (`8_transformers.py`) | Streamlit agrega la carpeta del script a `sys.path`; una página llamada `transformers.py` ocultaría la librería `transformers`. |
 
 ## 4. Pruebas

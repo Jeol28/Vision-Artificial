@@ -46,12 +46,20 @@ minimizando el **error de reproyección**:
 
     E = \sqrt{\frac{1}{N} \sum_i \lVert p_i - \hat p_i(K, d, R, t) \rVert^2}
 
-Homografía de la cancha
------------------------
-El piso de la cancha es un plano, así que la relación entre sus coordenadas en
-metros y los píxeles de la imagen es una **homografía** 3×3 (8 grados de
-libertad). Con las 4 esquinas de la cancha (9 × 18 m) se resuelve con DLT y se
-obtiene la vista cenital (desde arriba) con ``cv2.warpPerspective``.
+Homografía de la cancha (cámara trasera)
+----------------------------------------
+La cámara está detrás de la línea de fondo del equipo propio y ve las 4
+esquinas de **la media cancha propia** (9 × 9 m): las dos de la línea central,
+bajo la red, y las dos de la línea de fondo. El piso es un plano, así que la
+relación entre sus coordenadas en metros y los píxeles de la imagen es una
+**homografía** 3×3 (8 grados de libertad): esas 4 esquinas bastan para
+resolverla con DLT. La homografía vale para **todo** el plano del piso, de modo
+que también ubica a los rivales al otro lado de la red (con menos precisión,
+porque están más lejos).
+
+Coordenadas de la cancha completa (9 × 18 m), vistas desde atrás:
+``x`` de 0 a 9 m de izquierda a derecha; ``y`` de 0 m (línea de fondo rival)
+a 18 m (línea de fondo propia); la red está en ``y = 9``.
 """
 
 from __future__ import annotations
@@ -63,7 +71,10 @@ import numpy as np
 
 ANCHO_CANCHA_M = 9.0
 LARGO_CANCHA_M = 18.0
-ORDEN_ESQUINAS = ("superior izquierda", "superior derecha", "inferior derecha", "inferior izquierda")
+# Esquinas de la media cancha propia en el orden en que se marcan en la imagen
+ORDEN_ESQUINAS = ("superior izquierda (red)", "superior derecha (red)",
+                  "inferior derecha (línea de fondo)", "inferior izquierda (línea de fondo)")
+ESQUINAS_MEDIA_CANCHA_M = np.array([[0.0, 9.0], [9.0, 9.0], [9.0, 18.0], [0.0, 18.0]], np.float32)
 
 
 # --------------------------------------------------------------------------
@@ -242,23 +253,26 @@ def homografia_dlt(origen: np.ndarray, destino: np.ndarray) -> np.ndarray:
     return H / H[2, 2]
 
 
-def homografia_cancha(esquinas_img, px_por_m: float = 30.0, margen_m: float = 2.0,
-                      largo_m: float = LARGO_CANCHA_M, ancho_m: float = ANCHO_CANCHA_M) -> HomografiaCancha:
-    """Calcula la homografía de la cancha a partir de sus 4 esquinas en la imagen.
+def homografia_cancha(esquinas_img, px_por_m: float = 30.0, margen_m: float = 2.0) -> HomografiaCancha:
+    """Calcula la homografía de la cancha a partir de las 4 esquinas de la media cancha propia.
 
     Args:
-        esquinas_img: 4 puntos en orden superior izquierda, superior derecha,
-            inferior derecha, inferior izquierda. Se asume que el lado largo
-            (18 m) va de izquierda a derecha en la imagen, como en una toma lateral.
+        esquinas_img: 4 puntos de la imagen tomada desde atrás, en el orden
+            superior izquierda (red), superior derecha (red), inferior derecha
+            (línea de fondo) e inferior izquierda (línea de fondo). Corresponden a
+            (0, 9), (9, 9), (9, 18) y (0, 18) m (:data:`ESQUINAS_MEDIA_CANCHA_M`).
         px_por_m: resolución de la vista cenital.
         margen_m: zona libre (en metros) que se conserva alrededor de la cancha.
+
+    La vista cenital cubre la cancha completa (9 × 18 m) con la red horizontal y el
+    campo propio abajo, como la ve la cámara.
     """
     esquinas = np.asarray(esquinas_img, np.float32).reshape(4, 2)
-    metros = np.array([[0, 0], [largo_m, 0], [largo_m, ancho_m], [0, ancho_m]], np.float32)
-    H_m = cv2.getPerspectiveTransform(esquinas, metros)
+    H_m = cv2.getPerspectiveTransform(esquinas, ESQUINAS_MEDIA_CANCHA_M)
     S = np.array([[px_por_m, 0, margen_m * px_por_m], [0, px_por_m, margen_m * px_por_m], [0, 0, 1]])
-    tam = (int(round((largo_m + 2 * margen_m) * px_por_m)), int(round((ancho_m + 2 * margen_m) * px_por_m)))
-    return HomografiaCancha(H_m, S @ H_m, tam, px_por_m, margen_m, largo_m, ancho_m)
+    tam = (int(round((ANCHO_CANCHA_M + 2 * margen_m) * px_por_m)),
+           int(round((LARGO_CANCHA_M + 2 * margen_m) * px_por_m)))
+    return HomografiaCancha(H_m, S @ H_m, tam, px_por_m, margen_m)
 
 
 def vista_cenital(img: np.ndarray, hom: HomografiaCancha, dibujar_lineas: bool = True) -> np.ndarray:
@@ -272,8 +286,8 @@ def vista_cenital(img: np.ndarray, hom: HomografiaCancha, dibujar_lineas: bool =
             return int(round((x + m) * p)), int(round((y + m) * p))
 
         naranja = (53, 107, 255)
-        cv2.rectangle(salida, px(0, 0), px(hom.largo_m, hom.ancho_m), naranja, 1)
-        cv2.line(salida, px(hom.largo_m / 2, 0), px(hom.largo_m / 2, hom.ancho_m), naranja, 1)
+        cv2.rectangle(salida, px(0, 0), px(hom.ancho_m, hom.largo_m), naranja, 1)
+        cv2.line(salida, px(0, hom.largo_m / 2), px(hom.ancho_m, hom.largo_m / 2), naranja, 1)  # red
     return salida
 
 
@@ -294,4 +308,4 @@ def esta_en_cancha(puntos_m, hom: HomografiaCancha, tolerancia_m: float = 1.0) -
     """Indica qué puntos (en metros) caen dentro de la cancha más una tolerancia."""
     p = np.asarray(puntos_m, float).reshape(-1, 2)
     t = tolerancia_m
-    return (p[:, 0] >= -t) & (p[:, 0] <= hom.largo_m + t) & (p[:, 1] >= -t) & (p[:, 1] <= hom.ancho_m + t)
+    return (p[:, 0] >= -t) & (p[:, 0] <= hom.ancho_m + t) & (p[:, 1] >= -t) & (p[:, 1] <= hom.largo_m + t)

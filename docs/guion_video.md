@@ -18,7 +18,9 @@
 
 > "Hola, soy Jorge Enrique Olaya Liévano y este es mi proyecto final de Visión Artificial:
 > **VolleyVision**. Es una aplicación que analiza fotos y video de voleibol con un pipeline de visión
-> por computador. Cada tema del curso es una etapa: calibración, filtros, histogramas, umbralización,
+> por computador, con la cámara detrás de la línea de fondo de mi equipo: se nos ve de espaldas, con
+> el número de la camiseta, y al rival de frente. Cada tema del curso es una etapa: calibración,
+> filtros, histogramas, umbralización,
 > morfología, segmentación y caracterización. Al final comparo las técnicas clásicas con modelos
 > transformer de Hugging Face, que uso solo en inferencia con pesos públicos, sin entrenar nada."
 
@@ -53,10 +55,12 @@ Señalar la tabla del recorrido y el diagrama del pipeline.
 1. Pulsar *Calibrar cámara*. Mostrar K, los coeficientes de distorsión y el error RMS (< 0.5 px).
    Comparar con la K verdadera que aparece abajo.
 2. Mover el slider α y mostrar cómo se enderezan las rectas del tablero.
-3. Pestaña *Homografía*: hacer clic en las 4 esquinas en el orden indicado (sup-izq, sup-der,
-   inf-der, inf-izq), mostrar el botón *Reiniciar puntos* y la vista cenital.
-   > "Como el piso es un plano, con 4 esquinas basta para una homografía. La resuelvo también con mi
-   > propia DLT y coincide con OpenCV."
+3. Pestaña *Homografía*: hacer clic en las 4 esquinas de la media cancha propia en el orden indicado
+   (las dos de la red: sup-izq y sup-der; las dos de mi línea de fondo: inf-der e inf-izq), mostrar el
+   botón *Reiniciar puntos* y la vista cenital.
+   > "Desde atrás veo las 4 esquinas de mi media cancha. Como el piso es un plano, eso basta para una
+   > homografía, y esa homografía sirve para todo el piso, incluso el campo rival. La resuelvo también
+   > con mi propia DLT y coincide con OpenCV."
 
 ## 2:45 – 3:30 · Filtros
 
@@ -123,7 +127,9 @@ propios, solidez, Hu) y `es_balon`.
 1. *Descriptores*: seleccionar una región y mostrar centroide, caja y envolvente convexa.
 2. *¿Es balón?*: el balón sale en verde y las camisetas azules en rojo con su motivo; bajar la
    circularidad mínima para mostrar cómo cambian los aciertos.
-3. *Proyección a la cancha*: mapa cenital con los dos equipos.
+3. *Proyección a la cancha*: mapa cenital con mi equipo abajo y el rival arriba.
+   > "Uso el punto de los pies porque la homografía solo vale en el piso. Desde atrás, mi primera línea
+   > tapa a los rivales de la red: el método clásico une esas siluetas, y es una limitación de esta toma."
 
 ## 7:20 – 8:30 · Transformers: clásico vs. transformer
 

@@ -134,6 +134,16 @@ def cargar_sam(id_hf: str = "nielsr/slimsam-50-uniform", dispositivo: str | None
     return _cargar(id_hf, SamModel, SamProcessor, dispositivo)
 
 
+def _a_dispositivo(entradas, dispositivo: str):
+    """Mueve las entradas al dispositivo; los tensores float64 pasan a float32 (MPS no admite float64)."""
+    import torch
+
+    for k, v in list(entradas.items()):
+        if isinstance(v, torch.Tensor) and v.dtype == torch.float64:
+            entradas[k] = v.float()
+    return entradas.to(dispositivo)
+
+
 def _a_pil(img_bgr: np.ndarray):
     from PIL import Image
 
@@ -155,7 +165,7 @@ def detectar_objetos(img: np.ndarray, det: ModeloCargado, umbral: float = 0.5,
 
     t0 = time.perf_counter()
     pil = _a_pil(img)
-    entradas = det.procesador(images=pil, return_tensors="pt").to(det.dispositivo)
+    entradas = _a_dispositivo(det.procesador(images=pil, return_tensors="pt"), det.dispositivo)
     _sincronizar(det.dispositivo)
     t1 = time.perf_counter()
     with torch.no_grad():
@@ -193,7 +203,7 @@ def segmentar_semantica(img: np.ndarray, seg: ModeloCargado) -> dict:
     """
     import torch
 
-    entradas = seg.procesador(images=_a_pil(img), return_tensors="pt").to(seg.dispositivo)
+    entradas = _a_dispositivo(seg.procesador(images=_a_pil(img), return_tensors="pt"), seg.dispositivo)
     _sincronizar(seg.dispositivo)
     t0 = time.perf_counter()
     with torch.no_grad():
@@ -236,7 +246,7 @@ def segmentar_con_sam(img: np.ndarray, sam: ModeloCargado, punto=None, caja=None
         kwargs["input_points"] = [[[float(punto[0]), float(punto[1])]]]
     if caja is not None:
         kwargs["input_boxes"] = [[[float(v) for v in caja]]]
-    entradas = sam.procesador(images=_a_pil(img), return_tensors="pt", **kwargs).to(sam.dispositivo)
+    entradas = _a_dispositivo(sam.procesador(images=_a_pil(img), return_tensors="pt", **kwargs), sam.dispositivo)
     _sincronizar(sam.dispositivo)
     t0 = time.perf_counter()
     with torch.no_grad():

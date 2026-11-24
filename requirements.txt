@@ -1,0 +1,20 @@
+# Núcleo de visión por computador
+numpy>=1.26
+opencv-python-headless>=4.9
+scikit-image>=0.22
+matplotlib>=3.8
+pillow>=10.0
+
+# Transformers (solo inferencia, pesos públicos de Hugging Face)
+torch>=2.2
+torchvision>=0.17
+transformers>=4.45
+timm>=0.9          # requerido por facebook/detr-resnet-50
+
+# Interfaz
+streamlit>=1.40
+streamlit-image-coordinates>=0.1.9
+
+# Utilidades y pruebas
+requests>=2.31
+pytest>=8.0

@@ -62,15 +62,19 @@ def morfologia(*args):
 
 def construir(estado: gr.State) -> None:
     ui.encabezado("5 · Morfología matemática", "Limpiar las máscaras del balón y de los jugadores.")
+    ui.en_pocas_palabras("después de umbralizar quedan puntos sueltos y huecos. La morfología los limpia: la "
+                         "<b>erosión</b> adelgaza y borra puntos pequeños, la <b>dilatación</b> engorda y rellena; "
+                         "combinadas (apertura y cierre) dejan solo las formas que importan.")
     sel = ui.selector_imagen()
     with gr.Row():
         fuente = gr.Dropdown(list(MASCARAS), value=MASCARAS[0], label="Máscara de entrada")
-        ruido = gr.Slider(0, 10, 1, step=0.5, label="Ruido sal y pimienta extra (%)")
-    with gr.Row():
         operacion = gr.Dropdown(list(mo.OPERACIONES), value=mo.OPERACIONES[2], label="Operación")
-        forma = gr.Dropdown(list(mo.FORMAS), value=list(mo.FORMAS)[1], label="Forma del elemento estructurante")
-        tam = gr.Slider(1, 31, 5, step=2, label="Tamaño")
-        iters = gr.Slider(1, 5, 1, step=1, label="Iteraciones")
+        tam = gr.Slider(1, 31, 5, step=2, label="Tamaño del pincel (elemento estructurante)")
+    with ui.opciones_avanzadas():
+        with gr.Row():
+            ruido = gr.Slider(0, 10, 1, step=0.5, label="Ruido sal y pimienta extra (%)")
+            forma = gr.Dropdown(list(mo.FORMAS), value=list(mo.FORMAS)[1], label="Forma del elemento estructurante")
+            iters = gr.Slider(1, 5, 1, step=1, label="Iteraciones")
     with gr.Row():
         with gr.Column(scale=2):
             entrada = ui.imagen_salida("Entrada")
@@ -84,7 +88,7 @@ def construir(estado: gr.State) -> None:
     ui.md("#### Implementación manual vs OpenCV")
     comparacion = ui.md()
     ui.md("#### Limpieza completa (apertura → cierre → relleno → filtro de área)")
-    with gr.Row():
+    with ui.opciones_avanzadas(), gr.Row():
         ap = gr.Slider(1, 15, 3, step=2, label="Apertura")
         ci = gr.Slider(1, 21, 7, step=2, label="Cierre")
         area = gr.Slider(0, 500, 40, step=10, label="Área mínima (px)")

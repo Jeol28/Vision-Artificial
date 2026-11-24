@@ -10,8 +10,11 @@ from volleyvision.utils import io
 RECORRIDO = """
 #### Recorrido
 
-| Pestaña | Qué hace con el voleibol |
+Las pestañas 1 a 9 están en **📚 Temas del curso**.
+
+| Sección | Qué hace con el voleibol |
 |---|---|
+| 🏐 Analizar partido | Modo guiado: imagen → esquinas (opcional) → «Analizar», con el resultado en lenguaje sencillo |
 | 1 · Calibración | Matriz K, distorsión, error de reproyección y vista cenital desde la cámara trasera |
 | 2 · Filtros | Suavizado, bordes, convolución manual y realce de las líneas |
 | 3 · Histogramas | RGB/HSV, ecualización, CLAHE y comparación de uniformes |
@@ -49,7 +52,7 @@ def entorno() -> str:
 
 
 def construir(estado: gr.State) -> None:
-    gr.Markdown("# 🏐 Volley<span class='acento'>Vision</span>\n"
+    gr.Markdown("# Acerca de Volley<span class='acento'>Vision</span>\n"
                 "**Proyecto final – Visión Artificial** · Pontificia Universidad Javeriana  \n"
                 "Autor: **Jorge Enrique Olaya Liévano**")
     gr.Markdown("Aplicación que analiza fotos y video de un partido de voleibol con un **pipeline de visión por "

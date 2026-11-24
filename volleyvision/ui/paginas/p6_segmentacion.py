@@ -127,6 +127,9 @@ def sam_caja(*args):
 def construir(estado: gr.State) -> None:
     ui.encabezado("6 · Segmentación", "Métodos clásicos (contornos, watershed, k-means) y transformer "
                                       "(SegFormer, SAM).")
+    ui.en_pocas_palabras("segmentar es dividir la imagen en partes con sentido: piso, jugadores, balón. Los "
+                         "métodos clásicos agrupan por color y forma; los transformers (SegFormer y SAM) son "
+                         "modelos de inteligencia artificial que ya aprendieron cómo se ve una persona.")
     sel = ui.selector_imagen()
     E = sel.entradas
     with gr.Tabs():
@@ -175,10 +178,10 @@ se guardan solo los vértices. Si dos jugadores se tocan, salen **un solo** cont
             gr.on(None, watershed, E + [demo, frac], [gal_ws, texto_ws], trigger_mode="always_last")
 
         with gr.Tab("Jugadores (clásico)"):
-            with gr.Row():
+            usar_ws = gr.Checkbox(False, label="Separar jugadores pegados (watershed)")
+            with ui.opciones_avanzadas(), gr.Row():
                 kk = gr.Slider(3, 8, 6, step=1, label="k del modelo de fondo")
                 cierre = gr.Slider(3, 21, 9, step=2, label="Cierre vertical (px)")
-                usar_ws = gr.Checkbox(False, label="Separar con watershed")
             texto_j = ui.md()
             gal_j = ui.nueva_galeria(3)
             ui.que_esta_pasando(r"""

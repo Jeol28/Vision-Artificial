@@ -70,6 +70,9 @@ def uniformes(*args):
 
 def construir(estado: gr.State) -> None:
     ui.encabezado("3 · Histogramas", "Distribución de color, corrección de iluminación y comparación de uniformes.")
+    ui.en_pocas_palabras("un histograma cuenta cuántos píxeles hay de cada tono. Sirve para corregir una foto muy "
+                         "oscura o con luz desigual, y para comparar el color de las camisetas y saber quién es "
+                         "de cada equipo.")
     sel = ui.selector_imagen()
     E = sel.entradas
     with gr.Tabs():
@@ -89,8 +92,8 @@ Código: `core/histogramas.py` → `calcular_histograma` (usa `cv2.calcHist`).
             gr.on(None, histograma, E + [espacio], [original, grafica, canales], trigger_mode="always_last")
 
         with gr.Tab("Ecualización y CLAHE"):
-            with gr.Row():
-                clip = gr.Slider(0.5, 10, 2, step=0.5, label="CLAHE: clip limit")
+            clip = gr.Slider(0.5, 10, 2, step=0.5, label="CLAHE: intensidad de la corrección (clip limit)")
+            with ui.opciones_avanzadas():
                 baldosas = gr.Slider(2, 16, 8, step=1, label="CLAHE: baldosas por lado")
             gal = ui.nueva_galeria(3)
             salidas = []
@@ -116,10 +119,11 @@ Código: `core/histogramas.py` → `ecualizar_manual` (CDF a mano), `ecualizar_g
             with gr.Row():
                 fuente = gr.Radio(list(FUENTES_JUGADORES), value=FUENTES_JUGADORES[0],
                                   label="¿Cómo encontrar a los jugadores?")
-                metrica = gr.Dropdown(list(hi.METODOS_COMPARACION), value=next(iter(hi.METODOS_COMPARACION)),
-                                      label="Métrica de comparación")
                 nombre_det = gr.Dropdown(list(tm.MODELOS_DETECCION), value=next(iter(tm.MODELOS_DETECCION)),
                                          label="Detector transformer", visible=False)
+            with ui.opciones_avanzadas():
+                metrica = gr.Dropdown(list(hi.METODOS_COMPARACION), value=next(iter(hi.METODOS_COMPARACION)),
+                                      label="Métrica de comparación")
             with gr.Row():
                 with gr.Column(scale=3):
                     anotada = ui.imagen_salida("Equipo A (rojo) / equipo B (verde); recuadro blanco = torso usado")

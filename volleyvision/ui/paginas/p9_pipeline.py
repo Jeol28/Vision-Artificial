@@ -52,9 +52,11 @@ def _texto_valor(v) -> str:
 
 def construir(estado: gr.State) -> None:
     ui.encabezado("9 · Pipeline completo", "Todas las etapas encadenadas sobre una imagen o un frame de video.")
+    ui.en_pocas_palabras("es lo mismo que «Analizar partido», pero con todos los controles a la vista y el "
+                         "resultado de cada una de las 7 etapas.")
     sel = ui.selector_imagen()
     E = sel.entradas
-    with gr.Accordion("Configuración", open=True):
+    with gr.Accordion("⚙️ Configuración", open=False):
         with gr.Row():
             with gr.Column():
                 ui.md("**Calibración y cancha**")

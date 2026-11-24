@@ -66,9 +66,11 @@ def a_gris(img: np.ndarray) -> np.ndarray:
 
 
 def listar_muestras() -> dict[str, Path]:
-    """Imágenes de ejemplo disponibles (sintéticas y descargadas), nombre → ruta."""
+    """Imágenes de ejemplo disponibles (sintéticas y descargadas), nombre → ruta.
+
+    Se excluye el patrón del tablero (es para imprimir, no una escena)."""
     rutas = sorted(DIR_MUESTRAS.glob("*")) + sorted((DIR_MUESTRAS / "descargadas").glob("*"))
-    return {r.name: r for r in rutas if r.suffix.lower() in EXTENSIONES_IMAGEN}
+    return {r.name: r for r in rutas if r.suffix.lower() in EXTENSIONES_IMAGEN and not r.name.startswith("tablero")}
 
 
 def listar_videos() -> dict[str, Path]:

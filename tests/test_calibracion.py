@@ -28,16 +28,17 @@ def test_proyeccion_pinhole_manual_igual_a_opencv(rng):
 
 
 def test_dlt_manual_igual_a_opencv(escena):
-    metros = np.array([[0, 0], [18, 0], [18, 9], [0, 9]], np.float32)
+    metros = cal.ESQUINAS_MEDIA_CANCHA_M
     H_manual = cal.homografia_dlt(escena.esquinas, metros)
     H_ocv = cv2.getPerspectiveTransform(escena.esquinas, metros)
     np.testing.assert_allclose(H_manual, H_ocv / H_ocv[2, 2], rtol=1e-4, atol=1e-6)
 
 
-def test_homografia_cancha_lleva_esquinas_a_metros(escena):
+def test_homografia_media_cancha_lleva_esquinas_a_metros(escena):
+    # Cámara trasera: las 4 esquinas marcadas son las de la media cancha propia
     hom = cal.homografia_cancha(escena.esquinas)
     metros = cal.imagen_a_cancha(escena.esquinas, hom)
-    np.testing.assert_allclose(metros, [[0, 0], [18, 0], [18, 9], [0, 9]], atol=1e-3)
+    np.testing.assert_allclose(metros, [[0, 9], [9, 9], [9, 18], [0, 18]], atol=1e-3)
 
 
 def test_proyeccion_de_jugadores_a_cancha(escena):
@@ -45,14 +46,19 @@ def test_proyeccion_de_jugadores_a_cancha(escena):
     pies = [((j["caja"][0] + j["caja"][2]) / 2, j["caja"][3]) for j in escena.jugadores]
     metros = cal.imagen_a_cancha(pies, hom)
     reales = np.array([j["pos_m"] for j in escena.jugadores])
-    assert np.max(np.linalg.norm(metros - reales, axis=1)) < 0.15
+    error = np.linalg.norm(metros - reales, axis=1)
+    propios = np.array([j["equipo"] == "A" for j in escena.jugadores])
+    # La homografía de la media cancha propia también ubica al rival, pero con menos
+    # precisión: allí un píxel equivale a más metros.
+    assert error[propios].max() < 0.1
+    assert error[~propios].max() < 0.4
     assert cal.esta_en_cancha(metros, hom).all()
 
 
 def test_vista_cenital_tamano(escena):
     hom = cal.homografia_cancha(escena.esquinas, px_por_m=20, margen_m=1)
     cen = cal.vista_cenital(escena.imagen, hom)
-    assert cen.shape[:2] == (int(11 * 20), int(20 * 20))
+    assert cen.shape[:2] == (int(20 * 20), int(11 * 20))  # vertical: 18 m de largo, 9 m de ancho
 
 
 def test_correccion_distorsion_endereza_rectas(vistas_tablero):

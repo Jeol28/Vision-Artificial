@@ -72,7 +72,7 @@ with tabs[2]:
 
 with tabs[3]:
     c1, c2, c3 = st.columns(3)
-    kk = c1.slider("k del modelo de fondo", 3, 8, 5, key="seg_kk")
+    kk = c1.slider("k del modelo de fondo", 3, 8, 6, key="seg_kk")
     cierre = c2.slider("Cierre vertical (px)", 3, 21, 9, 2, key="seg_cierre")
     usar_ws = c3.checkbox("Separar con watershed", False, key="seg_ws")
     r = sg.segmentar_jugadores_clasico(img, kk, tam_cierre=cierre, usar_watershed=usar_ws)
@@ -130,7 +130,7 @@ with tabs[5]:
         if prompt.startswith("Punto"):
             from streamlit_image_coordinates import streamlit_image_coordinates
 
-            v = streamlit_image_coordinates(io.bgr_a_rgb(img), width=min(760, img.shape[1]), key="seg_sam_clic")
+            v = streamlit_image_coordinates(io.bgr_a_rgb(img), width="stretch", key="seg_sam_clic")
             if v is not None:
                 punto = (v["x"] * img.shape[1] / v["width"], v["y"] * img.shape[0] / v["height"])
         else:

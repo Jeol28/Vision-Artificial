@@ -22,12 +22,12 @@ with st.expander("Configuración", expanded=True):
         if esquinas is None and ui.esquinas_ejemplo(nombre, img) is not None:
             if st.checkbox("Usar esquinas de ejemplo de la escena sintética", True, key="pip_ej"):
                 esquinas = ui.esquinas_ejemplo(nombre, img)
-        st.write("Esquinas de la cancha: " + ("✅ listas" if esquinas is not None else "❌ sin marcar"))
+        st.write("Esquinas de la media cancha: " + ("✅ listas" if esquinas is not None else "❌ sin marcar"))
         marcar = st.checkbox("Marcar esquinas aquí", esquinas is None, key="pip_marcar")
     with c2:
         st.markdown("**Clásico**")
         clip = st.slider("CLAHE clip limit", 0.5, 6.0, 2.0, 0.5, key="pip_clip")
-        k = st.slider("k del modelo de fondo", 3, 8, 5, key="pip_k")
+        k = st.slider("k del modelo de fondo", 3, 8, 6, key="pip_k")
         cierre = st.slider("Cierre vertical (px)", 3, 21, 9, 2, key="pip_cierre")
     with c3:
         st.markdown("**Transformers**")
@@ -92,7 +92,8 @@ El pipeline (`core/pipeline.py` → `ejecutar_pipeline`) encadena los temas del 
 4. **Umbralización + morfología**: distancia al fondo con Otsu, rangos HSV del balón, apertura y cierre.
 5. **Segmentación**: contornos de la máscara clásica y, si se activa, {', '.join(tm.MODELOS_DETECCION)} / SegFormer.
 6. **Caracterización**: descriptores, reglas "¿es balón?" y equipos por histogramas H-S.
-7. **Mapa cenital**: homografía de la cancha aplicada al punto de apoyo de cada jugador.
+7. **Mapa cenital**: homografía (a partir de tu media cancha) aplicada al punto de apoyo de cada jugador;
+   tu campo queda abajo y el rival arriba, como lo ve la cámara trasera.
 
 Si hay detector transformer y encuentra personas, el mapa usa sus cajas; si no, las del método clásico.
 """)

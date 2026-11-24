@@ -6,7 +6,10 @@ función decorada con ``@spaces.GPU``. Sus reglas:
 * los modelos se cargan **al arrancar** el proceso y se mueven a ``cuda`` ahí
   mismo (ZeroGPU los empaqueta y los lleva a la GPU en cada llamada);
 * la inferencia va dentro de funciones ``@spaces.GPU``; lo que devuelven debe
-  poder serializarse (aquí: diccionarios con NumPy, nunca tensores ni modelos).
+  poder serializarse (aquí: diccionarios con NumPy, nunca tensores ni modelos);
+* ``duration`` es la reserva de GPU por llamada y se descuenta de la cuota diaria
+  del visitante antes de ejecutar: si es mayor que lo que le queda, la llamada
+  falla. Por eso se piden reservas cortas (la inferencia real tarda milisegundos).
 
 Fuera de un Space con ZeroGPU, ``spaces.GPU`` no hace nada y los modelos se
 cargan la primera vez que se usan (GPU NVIDIA, GPU Apple o CPU). En los dos
@@ -88,24 +91,24 @@ def _calentar_en_gpu(det: tm.ModeloCargado) -> None:
 # --------------------------------------------------------------------------
 # Inferencia (estas funciones usan la GPU de ZeroGPU cuando existe)
 # --------------------------------------------------------------------------
-@GPU(duration=60)
+@GPU(duration=15)
 def detectar(img, nombre: str, umbral: float) -> dict:
     det = detector(nombre)
     _calentar_en_gpu(det)
     return tm.detectar_objetos(img, det, umbral)
 
 
-@GPU(duration=60)
+@GPU(duration=15)
 def segmentar_semantica(img) -> dict:
     return tm.segmentar_semantica(img, segformer())
 
 
-@GPU(duration=60)
+@GPU(duration=20)
 def segmentar_con_sam(img, nombre: str, punto=None, caja=None) -> dict:
     return tm.segmentar_con_sam(img, sam(nombre), punto=punto, caja=caja)
 
 
-@GPU(duration=120)
+@GPU(duration=30)
 def comparar(img, nombres: list[str], umbral: float, verdad=None) -> dict:
     detectores = {n: detector(n) for n in nombres}
     for d in detectores.values():
@@ -113,7 +116,7 @@ def comparar(img, nombres: list[str], umbral: float, verdad=None) -> dict:
     return tm.comparar_metodos(img, detectores, umbral, verdad)
 
 
-@GPU(duration=120)
+@GPU(duration=30)
 def pipeline_con_modelos(img, cfg: pl.ConfigPipeline, nombre_det: str | None, usar_seg: bool):
     det = detector(nombre_det) if nombre_det else None
     if det is not None:

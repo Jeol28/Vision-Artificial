@@ -1,0 +1,77 @@
+# Arquitectura de VolleyVision
+
+## 1. Capas
+
+| Capa | Paquete | Responsabilidad | Puede importar |
+|---|---|---|---|
+| Presentación | `volleyvision/ui` | Widgets de Streamlit, navegación, caché de modelos, mostrar resultados | `core`, `utils`, `streamlit` |
+| Dominio | `volleyvision/core` | Algoritmos de visión como **funciones puras** (un módulo por tema) | `utils`, OpenCV, NumPy, scikit-image, torch, transformers |
+| Utilidades | `volleyvision/utils` | E/S de imágenes y video, dibujo, datos sintéticos | OpenCV, NumPy, Matplotlib |
+
+Las dependencias van en un solo sentido: **ui → core → utils**. Ningún archivo de `core/` importa
+Streamlit, y eso es lo que permite:
+
+- probar todo el procesamiento con `pytest` sin levantar la app;
+- reutilizar el core desde scripts (por ejemplo `scripts/generar_sinteticos.py`) o cuadernos;
+- cambiar la interfaz (por ejemplo a Gradio o una API REST) sin tocar los algoritmos.
+
+### Convenciones
+
+- Las imágenes viajan como `np.ndarray` **BGR `uint8`** (el orden de OpenCV). Las máscaras son
+  `uint8` con valores 0/255. La conversión a RGB se hace solo al mostrar (`utils.io.bgr_a_rgb`).
+- Las funciones devuelven imágenes y/o diccionarios o *dataclasses* con datos (`ResultadoCalibracion`,
+  `HomografiaCancha`, `ModeloCargado`, `Paso`).
+- Los parámetros llevan valores por defecto razonables, así que la UI solo expone los que vale la pena
+  explorar.
+
+## 2. Flujo de datos del pipeline
+
+```mermaid
+sequenceDiagram
+    participant U as Usuario (UI)
+    participant P as core.pipeline
+    participant C as core.calibracion
+    participant H as core.histogramas
+    participant F as core.filtros
+    participant S as core.segmentacion / morfologia / umbralizacion
+    participant T as core.transformers_models
+    participant K as core.caracterizacion
+
+    U->>P: ejecutar_pipeline(img, ConfigPipeline, detector, segformer)
+    P->>C: corregir_distorsion(img, K, dist)
+    P->>H: aplicar_clahe(img)
+    P->>F: resaltar_lineas_cancha(img)
+    P->>S: segmentar_jugadores_clasico(img), mascara balón HSV + cierre
+    P->>T: detectar_objetos(img, RT-DETR/DETR), segmentar_semantica(img)
+    P->>K: describir_region, detectar_balon_clasico
+    P->>H: asignar_equipos(histogramas H-S de los torsos)
+    P->>C: homografia_cancha(esquinas) → proyectar_jugadores
+    P-->>U: list[Paso] (imágenes intermedias, datos, tiempo)
+```
+
+## 3. Decisiones de diseño
+
+| Decisión | Motivo |
+|---|---|
+| Datos sintéticos con verdad conocida (`utils/sinteticos.py`) | Permiten **verificar** cada algoritmo con números (K recuperada, jugadores encontrados, posiciones en metros) y que la app funcione sin internet. |
+| Implementaciones manuales junto a las de OpenCV (convolución, Otsu, ecualización, erosión/dilatación, DLT, proyección pinhole) | Muestran la teoría del curso y las pruebas comparan ambas versiones. |
+| RT-DETR por defecto y DETR como opción | RT-DETR es más rápido y preciso; DETR es el modelo original y sirve de referencia en la comparación de tiempos. |
+| SlimSAM por defecto y SAM ViT-B como opción | SlimSAM es viable en CPU (~28 M parámetros frente a ~94 M). |
+| `st.cache_resource` en `ui/modelos.py` (no en el core) | El core sigue sin depender de Streamlit; la caché vive en la capa de presentación. Además se hace una inferencia de calentamiento para que la comparación de tiempos sea justa. |
+| Selección automática de dispositivo (`cuda` → `mps` → `cpu`) y sincronización antes de medir | Los tiempos en GPU son asíncronos; sin sincronizar se medirían mal. En MPS se convierten las entradas float64 a float32. |
+| Punto de apoyo (centro inferior de la caja) para el mapa cenital | La homografía solo es válida para puntos del plano del piso. |
+| Páginas con prefijo numérico (`8_transformers.py`) | Streamlit agrega la carpeta del script a `sys.path`; una página llamada `transformers.py` ocultaría la librería `transformers`. |
+
+## 4. Pruebas
+
+| Archivo | Cubre |
+|---|---|
+| `tests/test_calibracion.py` | Recuperación de K y distorsión, pinhole y DLT manuales, proyección de jugadores, corrección de rectas |
+| `tests/test_filtros.py` | Convolución manual = `filter2D` (7 kernels, color, asimétricos), mediana vs. promedio, Hough |
+| `tests/test_histogramas.py` | Histograma y ecualización manuales, CLAHE, separación de equipos |
+| `tests/test_umbralizacion.py` | Otsu manual vs. OpenCV, HSV del balón, rango circular, adaptativo vs. global |
+| `tests/test_morfologia.py` | Erosión/dilatación manuales, dualidad, idempotencia, limpieza de la máscara del balón |
+| `tests/test_segmentacion.py` | Contornos, watershed, k-means, jugadores clásicos, IoU |
+| `tests/test_caracterizacion.py` | Descriptores vs. scikit-image, invariancia de Hu, clasificación del balón, proyección |
+| `tests/test_transformers.py` | Pipeline completo, con calibración y sin esquinas; modelos reales (`-m slow`) |
+| `tests/test_ui.py` | Cada página de Streamlit se ejecuta sin excepciones |

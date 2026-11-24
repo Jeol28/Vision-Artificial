@@ -4,7 +4,9 @@
 **Autor:** Jorge Enrique Olaya Liévano
 
 VolleyVision analiza fotos y video de un partido de voleibol con un **pipeline de visión por computador**.
-Cada tema del curso es una etapa del pipeline: calibración de la cámara, filtros, histogramas,
+La cámara se ubica **detrás de la línea de fondo del equipo propio** (vista trasera), de modo que se
+ve al equipo propio de espaldas, con el número de la camiseta visible, y al rival de frente al otro lado
+de la red. Cada tema del curso es una etapa del pipeline: calibración de la cámara, filtros, histogramas,
 umbralización, morfología matemática, segmentación y caracterización. Al final se comparan las técnicas
 clásicas con **modelos transformer** de Hugging Face (RT-DETR, DETR, SegFormer y SAM).
 
@@ -75,7 +77,8 @@ streamlit run volleyvision/ui/app.py
 ```
 
 Se abre en `http://localhost:8501`. Recorrido sugerido: **1 · Calibración** (pulsar *Calibrar
-cámara* y marcar las 4 esquinas en la pestaña *Homografía*) → páginas 2 a 8 → **9 · Pipeline**.
+cámara* y marcar las 4 esquinas de la media cancha propia en la pestaña *Homografía*) → páginas 2 a 8 →
+**9 · Pipeline**.
 
 Cada página tiene la carga de imagen (ejemplo, archivo propio o un frame de video), sliders para los
 parámetros, el resultado al lado de la original y un desplegable **"¿Qué está pasando?"** con la teoría
@@ -91,7 +94,7 @@ Se usa un flujo tipo **Git Flow simplificado**:
 |---|---|
 | `main` | Versión estable y entregable. Solo recibe merges desde `develop` y se etiqueta (`v1.0.0`). |
 | `develop` | Rama de integración: aquí se juntan los módulos terminados y probados. |
-| `feature/<tema>` | Una rama por módulo del curso: `feature/calibracion`, `feature/filtros`, `feature/histogramas`, `feature/umbralizacion`, `feature/morfologia`, `feature/segmentacion`, `feature/caracterizacion`, `feature/transformers`, `feature/ui` (y `feature/docs` para la documentación). |
+| `feature/<tema>` | Una rama por módulo del curso: `feature/calibracion`, `feature/filtros`, `feature/histogramas`, `feature/umbralizacion`, `feature/morfologia`, `feature/segmentacion`, `feature/caracterizacion`, `feature/transformers`, `feature/ui` (y `feature/docs` para la documentación). Los cambios posteriores siguen el mismo flujo: `feature/camara-trasera` cambió la cámara a la vista trasera (`v1.1.0`). |
 
 Reglas:
 
@@ -172,6 +175,15 @@ gitGraph
     merge feature/docs
     checkout main
     merge develop tag: "v1.0.0"
+    checkout develop
+    branch feature/camara-trasera
+    checkout feature/camara-trasera
+    commit id: "feat: cámara trasera"
+    commit id: "docs: cámara trasera"
+    checkout develop
+    merge feature/camara-trasera
+    checkout main
+    merge develop tag: "v1.1.0"
 ```
 
 Para ver el historial real: `git log --oneline --graph --all`.
@@ -262,7 +274,7 @@ VolleyVision/
 
 | Módulo | Qué hace (aplicado al voleibol) | Funciones clave |
 |---|---|---|
-| `calibracion` | Calibración de Zhang con tablero de ajedrez (K, distorsión, error de reproyección), corrección de distorsión y homografía de la cancha de 9 × 18 m a partir de 4 esquinas, con vista cenital. Modelo pinhole explicado en los docstrings. Incluye DLT propia comparada con OpenCV. | `calibrar_camara`, `corregir_distorsion`, `homografia_cancha`, `homografia_dlt`, `vista_cenital` |
+| `calibracion` | Calibración de Zhang con tablero de ajedrez (K, distorsión, error de reproyección), corrección de distorsión y homografía de la cancha desde la **cámara trasera**: con las 4 esquinas de la media cancha propia (9 × 9 m) se obtiene la homografía de todo el piso y la vista cenital de la cancha de 9 × 18 m. Modelo pinhole explicado en los docstrings. Incluye DLT propia comparada con OpenCV. | `calibrar_camara`, `corregir_distorsion`, `homografia_cancha`, `homografia_dlt`, `vista_cenital` |
 | `filtros` | Promedio, gaussiano, mediana y bilateral; Sobel, Laplaciano y Canny; convolución manual (NumPy) comparada con `cv2.filter2D`; realce de las líneas de la cancha (bilateral + Canny + Hough). | `suavizar`, `sobel`, `canny`, `convolucion_manual`, `resaltar_lineas_cancha` |
 | `histogramas` | Histogramas RGB/HSV, ecualización global (y manual con la CDF), CLAHE para la iluminación del coliseo y comparación H-S de uniformes con `cv2.compareHist` para asignar equipos. | `calcular_histograma`, `ecualizar_manual`, `aplicar_clahe`, `asignar_equipos` |
 | `umbralizacion` | Umbral global, **Otsu implementado a mano** con la curva σ²_B(t), Otsu de OpenCV, umbral adaptativo (media y gaussiano) y rangos HSV para el balón y la cancha. | `otsu_manual`, `umbral_adaptativo`, `umbral_hsv` |
@@ -307,15 +319,18 @@ Qué se verifica, entre otras cosas:
 - Erosión y dilatación manuales coinciden con OpenCV; dualidad e idempotencia de la apertura.
 - Watershed separa objetos que se tocan; las excentricidades coinciden con scikit-image; Hu es
   invariante a rotación y escala.
-- El pipeline clásico encuentra ≥ 9 de los 12 jugadores sintéticos, el balón y dos equipos.
+- La homografía de la media cancha ubica al equipo propio con error < 10 cm y al rival con error < 40 cm.
+- El pipeline clásico encuentra ≥ 7 de los 12 jugadores sintéticos (la vista trasera tiene oclusiones),
+  el balón y los dos equipos.
 - Cada página de la UI se ejecuta sin excepciones (`streamlit.testing`).
 
 ---
 
 ## Datos de ejemplo
 
-- `data/samples/cancha_sintetica*.jpg` y `rally_sintetico.mp4`: escenas sintéticas con posiciones
-  conocidas (cancha naranja, zona libre verde, equipo rojo y azul, balón amarillo con franjas azules).
+- `data/samples/cancha_sintetica*.jpg` y `rally_sintetico.mp4`: escenas sintéticas tomadas desde detrás
+  de la línea de fondo propia, con posiciones conocidas (cancha naranja, zona libre verde, equipo propio
+  rojo de espaldas con su número, rival azul, balón amarillo con franjas azules).
 - `data/samples/tablero/`: 14 fotos sintéticas de un tablero 9 × 6 tomadas con una cámara de K y
   distorsión conocidas. `tablero_plano.png` es el patrón para imprimir.
 - `data/samples/descargadas/` (no versionada): fotos reales de Wikimedia Commons con licencia libre
@@ -332,11 +347,16 @@ Qué se verifica, entre otras cosas:
   público con jugadores.
 - **Segmentación clásica de jugadores**: supone que los colores dominantes son el fondo (piso, zona
   libre, gradas). Falla con público muy colorido, jugadores superpuestos o colores parecidos al piso.
+- **Oclusiones de la cámara trasera**: la primera línea propia tapa en parte a los rivales que están en
+  la red. El método clásico une esas siluetas (encuentra 7–8 de 12 jugadores en las escenas sintéticas)
+  y la caja unida puede quedar asignada al equipo equivocado. Una cámara elevada (tribuna o trípode alto)
+  reduce el problema.
 - **Balón**: los rangos HSV están pensados para balones amarillo/azul; otros colores requieren ajustar
   los sliders.
-- **Homografía**: supone el piso plano, las 4 esquinas visibles y una toma lateral (lado de 18 m
-  horizontal). Solo los puntos del piso se proyectan bien: un balón en el aire no se puede ubicar en el
-  mapa cenital con una sola cámara.
+- **Homografía**: supone el piso plano y las 4 esquinas de la media cancha propia visibles (las dos de la
+  línea central bajo la red y las dos de la línea de fondo propia). Los rivales se ubican con menos
+  precisión porque están más lejos (cada píxel abarca más metros). Solo los puntos del piso se proyectan
+  bien: un balón en el aire no se puede ubicar en el mapa cenital con una sola cámara.
 - **Calibración**: el ejemplo usa un tablero sintético. Para una cámara real hay que fotografiar un
   tablero impreso con esa misma cámara y resolución.
 - **Equipos**: se asume que hay dos uniformes de colores distintos; el líbero y los árbitros pueden

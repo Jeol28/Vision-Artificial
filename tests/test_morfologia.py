@@ -47,7 +47,8 @@ def test_idempotencia_apertura(mascara_ruidosa):
 
 def test_limpiar_mascara_del_balon(escena):
     m = um.mascara_por_nombre(escena.imagen, "Balón (amarillo)")
-    limpia = mo.limpiar_mascara(m, 3, 7, "Elipse", area_min=20, rellenar=True)
+    # cierre de 11 px: une los trozos amarillos que separan las franjas azules del balón
+    limpia = mo.limpiar_mascara(m, 3, 11, "Elipse", area_min=20, rellenar=True)
     assert mo.contar_componentes(limpia) == 1
     cx, cy = escena.balon["centro"]
     assert limpia[cy, cx] == 255

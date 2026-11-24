@@ -182,7 +182,7 @@ def mascara_lineas_blancas(img: np.ndarray, s_max: int = 50, v_min: int = 170) -
 # --------------------------------------------------------------------------
 # Jugadores (pipeline clásico)
 # --------------------------------------------------------------------------
-def segmentar_jugadores_clasico(img: np.ndarray, k: int = 5, frac_fondo: float = 0.08,
+def segmentar_jugadores_clasico(img: np.ndarray, k: int = 6, frac_fondo: float = 0.08,
                                 tam_apertura: int = 3, tam_cierre: int = 9, area_min: int = 150,
                                 relacion_min: float = 1.3, usar_watershed: bool = False,
                                 quitar_lineas: bool = True,

@@ -36,13 +36,13 @@ class ConfigPipeline:
     """Parámetros del pipeline (todos con valores por defecto razonables)."""
 
     calibracion: cal.ResultadoCalibracion | None = None
-    esquinas: np.ndarray | None = None          # 4 esquinas de la cancha en la imagen de entrada
+    esquinas: np.ndarray | None = None          # 4 esquinas de la media cancha propia (cámara trasera)
     clip_limit: float = 2.0
     baldosas: int = 8
     d_bilateral: int = 7
     canny_bajo: int = 50
     canny_alto: int = 150
-    k_kmeans: int = 5
+    k_kmeans: int = 6
     tam_cierre: int = 9
     area_min: int = 150
     umbral_deteccion: float = 0.5
@@ -190,7 +190,7 @@ def ejecutar_pipeline(img: np.ndarray, config: ConfigPipeline | None = None,
             "Se proyecta el punto de apoyo (pies) porque la homografía solo vale para el plano del piso."))
     else:
         pasos.append(Paso("7. Mapa cenital", {}, {}, t(),
-                          "Marca las 4 esquinas de la cancha para generar el mapa cenital."))
+                          "Marca las 4 esquinas de tu media cancha para generar el mapa cenital."))
     return pasos
 
 

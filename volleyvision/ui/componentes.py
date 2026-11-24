@@ -182,8 +182,8 @@ def esquinas_ejemplo(nombre: str, img: np.ndarray) -> np.ndarray | None:
     return None
 
 
-def selector_esquinas(img: np.ndarray, nombre: str, clave: str, ancho: int = 760) -> np.ndarray | None:
-    """Marca las 4 esquinas de la cancha haciendo clic sobre la imagen.
+def selector_esquinas(img: np.ndarray, nombre: str, clave: str) -> np.ndarray | None:
+    """Marca las 4 esquinas de la media cancha propia (cámara trasera) haciendo clic sobre la imagen.
 
     Incluye: orden indicado en pantalla, puntos dibujados, botón de reinicio y
     entrada manual de coordenadas como respaldo.
@@ -199,8 +199,9 @@ def selector_esquinas(img: np.ndarray, nombre: str, clave: str, ancho: int = 760
     with c1:
         if len(puntos) < 4:
             st.markdown(f"<div class='vv-orden'>Haz clic en la esquina <b>{len(puntos) + 1}/4: "
-                        f"{cal.ORDEN_ESQUINAS[len(puntos)]}</b> de la cancha. Orden: "
-                        "sup-izq → sup-der → inf-der → inf-izq.</div>", unsafe_allow_html=True)
+                        f"{cal.ORDEN_ESQUINAS[len(puntos)]}</b> de tu media cancha. Orden: "
+                        "sup-izq → sup-der (bajo la red) → inf-der → inf-izq (tu línea de fondo).</div>",
+                        unsafe_allow_html=True)
         else:
             st.markdown("<div class='vv-orden'>✅ Las 4 esquinas están marcadas.</div>", unsafe_allow_html=True)
     with c2:
@@ -221,7 +222,7 @@ def selector_esquinas(img: np.ndarray, nombre: str, clave: str, ancho: int = 760
         from streamlit_image_coordinates import streamlit_image_coordinates
 
         version = st.session_state.get(f"{clave}_componente_v", 0)
-        valor = streamlit_image_coordinates(io.bgr_a_rgb(dibujada), width=min(ancho, w),
+        valor = streamlit_image_coordinates(io.bgr_a_rgb(dibujada), width="stretch",  # conserva la proporción
                                             key=f"{clave}_clic_{version}")
     except Exception as e:  # el componente puede fallar en algunos navegadores
         st.warning(f"No se pudo cargar el selector por clic ({e}). Usa la entrada manual.")

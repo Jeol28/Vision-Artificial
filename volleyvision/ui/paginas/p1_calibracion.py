@@ -118,15 +118,19 @@ def homografia(*args):
 def construir(estado: gr.State) -> None:
     ui.encabezado("1 · Modelos de cámara y calibración",
                   "Calibración intrínseca con tablero de ajedrez y homografía de la cancha desde la cámara trasera.")
+    ui.en_pocas_palabras("toda cámara deforma un poco la imagen. Con fotos de un tablero de ajedrez se mide esa "
+                         "deformación para corregirla, y con las 4 esquinas de la cancha se calcula cómo se vería "
+                         "desde arriba.")
     with gr.Tabs():
         with gr.Tab("Calibración intrínseca"):
-            with gr.Row():
-                fuente = gr.Radio(list(FUENTES_TABLERO), value=FUENTES_TABLERO[0], label="Fotos del tablero")
-                cols = gr.Number(sinteticos.PATRON[0], label="Esquinas interiores (columnas)", precision=0,
-                                 minimum=3, maximum=20)
-                filas = gr.Number(sinteticos.PATRON[1], label="Esquinas interiores (filas)", precision=0,
-                                  minimum=3, maximum=20)
-                mm = gr.Number(sinteticos.TAM_CUADRO_MM, label="Lado del cuadro (mm)", minimum=1, maximum=200)
+            fuente = gr.Radio(list(FUENTES_TABLERO), value=FUENTES_TABLERO[0], label="Fotos del tablero")
+            with ui.opciones_avanzadas():
+                with gr.Row():
+                    cols = gr.Number(sinteticos.PATRON[0], label="Esquinas interiores (columnas)", precision=0,
+                                     minimum=3, maximum=20)
+                    filas = gr.Number(sinteticos.PATRON[1], label="Esquinas interiores (filas)", precision=0,
+                                      minimum=3, maximum=20)
+                    mm = gr.Number(sinteticos.TAM_CUADRO_MM, label="Lado del cuadro (mm)", minimum=1, maximum=200)
             archivos = gr.File(label="Fotos del tablero (mínimo 3, ideal 10–20 desde ángulos distintos)",
                                file_count="multiple", file_types=["image"], visible=False)
             ui.md(f"<span class='vv-nota'>{len(io.listar_tableros())} vistas sintéticas generadas con K y "
@@ -160,8 +164,9 @@ def construir(estado: gr.State) -> None:
                 with gr.Column(scale=3):
                     ui.selector_esquinas(sel, estado)
                 with gr.Column(scale=2):
-                    ppm = gr.Slider(10, 60, 30, step=1, label="Resolución de la vista cenital (px/m)")
-                    margen = gr.Slider(0, 5, 2, step=0.5, label="Zona libre alrededor (m)")
+                    with ui.opciones_avanzadas():
+                        ppm = gr.Slider(10, 60, 30, step=1, label="Resolución de la vista cenital (px/m)")
+                        margen = gr.Slider(0, 5, 2, step=0.5, label="Zona libre alrededor (m)")
                     cenital = ui.imagen_salida("Vista cenital (cv2.warpPerspective)")
                     texto_h = ui.md()
             ui.que_esta_pasando(TEORIA_HOMOGRAFIA)

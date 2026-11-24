@@ -33,7 +33,7 @@ ESTADO_INICIAL = {"esquinas": {}, "calibracion": None, "calibracion_imagenes": N
 
 CSS = """
 .gradio-container { max-width: 1400px !important; }
-h1 .acento, h2 .acento { color: #FF6B35; }
+.acento { color: #FF6B35; }
 .vv-orden { background: #243044; border-left: 4px solid #FF6B35; padding: .5rem .8rem; border-radius: 4px; }
 .vv-nota { color: #B8BFCC; font-size: .9rem; }
 .vv-metricas { display: flex; flex-wrap: wrap; gap: .6rem; margin: .3rem 0; }
@@ -41,6 +41,13 @@ h1 .acento, h2 .acento { color: #FF6B35; }
 .vv-metrica .etq { color: #B8BFCC; font-size: .8rem; }
 .vv-metrica .val { color: #F5F5F7; font-size: 1.35rem; font-weight: 600; }
 .vv-explicacion > .label-wrap span { color: #FF6B35 !important; font-weight: 600; }
+.vv-sencillo { background: #243044; border-radius: 6px; padding: .6rem .9rem; font-size: 1rem; }
+.vv-paso { font-size: 1.15rem; font-weight: 600; margin-top: .4rem; }
+.vv-paso .num { display: inline-block; background: #FF6B35; color: #1A2332; border-radius: 50%;
+                width: 1.7rem; height: 1.7rem; text-align: center; line-height: 1.7rem; margin-right: .4rem; }
+.vv-resumen { background: #243044; border-left: 4px solid #FF6B35; border-radius: 6px; padding: .8rem 1rem;
+              font-size: 1.05rem; }
+#vv-analizar { font-size: 1.2rem; min-height: 3.2rem; }
 """
 
 
@@ -70,6 +77,16 @@ JS_MODO_OSCURO = "() => { document.body.classList.add('dark'); }"
 # --------------------------------------------------------------------------
 def encabezado(titulo: str, subtitulo: str) -> None:
     gr.Markdown(f"## {titulo}\n<span class='vv-nota'>{subtitulo}</span>")
+
+
+def en_pocas_palabras(texto: str) -> None:
+    """Recuadro con la idea principal de la pestaña en lenguaje sencillo (para quien no es experto)."""
+    gr.Markdown(f"<div class='vv-sencillo'>💡 <b>En pocas palabras:</b> {texto}</div>")
+
+
+def opciones_avanzadas():
+    """Acordeón cerrado para los parámetros que un usuario nuevo no necesita tocar."""
+    return gr.Accordion("⚙️ Opciones avanzadas", open=False)
 
 
 def que_esta_pasando(texto: str, abierto: bool = False) -> None:
@@ -175,7 +192,7 @@ def selector_imagen(por_defecto: str = MUESTRA_POR_DEFECTO, permitir_video: bool
     n_frames = io.info_video(io.listar_videos()[valor_video])[0] if valor_video != SUBIR_VIDEO else 2
     with gr.Group():
         with gr.Row(equal_height=False):
-            fuente = gr.Radio(list(FUENTES if permitir_video else FUENTES[:2]), value=FUENTES[0], label="Fuente",
+            fuente = gr.Radio(list(FUENTES if permitir_video else FUENTES[:2]), value=FUENTES[0], label="¿De dónde sale la imagen?",
                               scale=1)
             with gr.Column(scale=2):
                 muestra = gr.Dropdown(muestras, value=valor_muestra, label="Imagen")

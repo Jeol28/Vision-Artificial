@@ -59,6 +59,9 @@ def hsv(*args):
 
 def construir(estado: gr.State) -> None:
     ui.encabezado("4 · Umbralización y binarización", "Separar el balón, la cancha y los jugadores del fondo.")
+    ui.en_pocas_palabras("umbralizar es decidir, píxel por píxel, si algo es «objeto» (blanco) o «fondo» "
+                         "(negro). Puede hacerse por brillo (un valor de corte), de forma automática (Otsu) o "
+                         "por color (por ejemplo, todo lo amarillo es el balón).")
     sel = ui.selector_imagen()
     E = sel.entradas
     with gr.Tabs():
@@ -99,10 +102,12 @@ que es $O(L)$ después del histograma, y coincide con OpenCV.
 
         with gr.Tab("Adaptativo"):
             with gr.Row():
-                metodo = gr.Radio(["gaussiano", "media"], value="gaussiano", label="Método")
-                bloque = gr.Slider(3, 101, 31, step=2, label="Tamaño de bloque")
+                bloque = gr.Slider(3, 101, 31, step=2, label="Tamaño de la zona que se mira alrededor (bloque)")
                 C = gr.Slider(-20, 30, 5, step=1, label="Constante C")
-                inv2 = gr.Checkbox(True, label="Invertir")
+            with ui.opciones_avanzadas():
+                with gr.Row():
+                    metodo = gr.Radio(["gaussiano", "media"], value="gaussiano", label="Método")
+                    inv2 = gr.Checkbox(True, label="Invertir")
             with gr.Row():
                 glob = ui.imagen_salida("Otsu global")
                 adap = ui.imagen_salida("Adaptativo")
@@ -122,17 +127,18 @@ resalta las líneas y los bordes de los jugadores en toda la imagen.
             h0, h1, s0, s1, v0, v1 = rango_preset(primero)
             with gr.Row():
                 with gr.Column(scale=1):
-                    preset = gr.Dropdown(list(um.RANGOS_HSV), value=primero, label="Rango predefinido")
-                    with gr.Row():
-                        hmin = gr.Slider(0, 179, h0, step=1, label="H mín (tono)")
-                        hmax = gr.Slider(0, 179, h1, step=1, label="H máx")
-                    with gr.Row():
-                        smin = gr.Slider(0, 255, s0, step=1, label="S mín (saturación)")
-                        smax = gr.Slider(0, 255, s1, step=1, label="S máx")
-                    with gr.Row():
-                        vmin = gr.Slider(0, 255, v0, step=1, label="V mín (brillo)")
-                        vmax = gr.Slider(0, 255, v1, step=1, label="V máx")
-                    circular = gr.Checkbox(False, label="Tono circular (H mín > H máx, p. ej. rojos)")
+                    preset = gr.Dropdown(list(um.RANGOS_HSV), value=primero, label="¿Qué color buscar?")
+                    with gr.Accordion("⚙️ Ajustar el rango a mano", open=False):
+                        with gr.Row():
+                            hmin = gr.Slider(0, 179, h0, step=1, label="H mín (tono)")
+                            hmax = gr.Slider(0, 179, h1, step=1, label="H máx")
+                        with gr.Row():
+                            smin = gr.Slider(0, 255, s0, step=1, label="S mín (saturación)")
+                            smax = gr.Slider(0, 255, s1, step=1, label="S máx")
+                        with gr.Row():
+                            vmin = gr.Slider(0, 255, v0, step=1, label="V mín (brillo)")
+                            vmax = gr.Slider(0, 255, v1, step=1, label="V máx")
+                        circular = gr.Checkbox(False, label="Tono circular (H mín > H máx, p. ej. rojos)")
                 with gr.Column(scale=3):
                     with gr.Row():
                         mascara = ui.imagen_salida("Máscara")

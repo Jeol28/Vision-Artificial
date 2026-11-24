@@ -100,6 +100,9 @@ def proyeccion(*args):
 def construir(estado: gr.State) -> None:
     ui.encabezado("7 · Caracterización", "Descriptores de forma, clasificación \"¿es balón?\" y posiciones en la "
                                          "cancha.")
+    ui.en_pocas_palabras("caracterizar es medir cada objeto encontrado (tamaño, qué tan redondo es, su color) "
+                         "para decidir qué es: una forma redonda y amarilla es el balón; una alta y angosta, un "
+                         "jugador. Al final se ubica a cada jugador en un mapa de la cancha.")
     sel = ui.selector_imagen()
     E = sel.entradas
     with gr.Tabs():
@@ -132,8 +135,8 @@ Código: `core/caracterizacion.py` → `describir_region`.
                   trigger_mode="always_last")
 
         with gr.Tab("¿Es balón?"):
-            with gr.Row():
-                circ = gr.Slider(0.3, 1.0, 0.78, step=0.01, label="Circularidad mínima")
+            circ = gr.Slider(0.3, 1.0, 0.78, step=0.01, label="¿Qué tan redondo debe ser? (circularidad mínima)")
+            with ui.opciones_avanzadas(), gr.Row():
                 exc = gr.Slider(0.1, 1.0, 0.45, step=0.01, label="Excentricidad máxima")
                 sol = gr.Slider(0.5, 1.0, 0.85, step=0.01, label="Solidez mínima")
                 col = gr.Slider(0.0, 1.0, 0.4, step=0.05, label="Fracción de amarillo mínima")

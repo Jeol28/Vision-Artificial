@@ -1,50 +1,126 @@
-"""Smoke tests de la UI: cada página se ejecuta sin excepciones (streamlit.testing)."""
+"""Pruebas de la UI (Gradio): la app se construye y cada callback corre sin excepciones.
 
-from pathlib import Path
+Los callbacks se llaman directamente con los valores por defecto del selector
+de imagen (la escena sintética), sin levantar un servidor.
+"""
 
+import gradio as gr
+import numpy as np
 import pytest
-from streamlit.testing.v1 import AppTest
 
-PAGINAS = Path(__file__).resolve().parents[1] / "volleyvision" / "ui" / "paginas"
-SIN_MODELOS = ["0_inicio", "1_calibracion", "2_filtros", "3_histogramas", "4_umbralizacion", "5_morfologia",
-               "6_segmentacion", "7_caracterizacion"]
+from volleyvision.ui import componentes as ui
+from volleyvision.ui.app import construir_app
+from volleyvision.ui.paginas import (p1_calibracion, p2_filtros, p3_histogramas, p4_umbralizacion, p5_morfologia,
+                                     p6_segmentacion, p7_caracterizacion, p8_transformers, p9_pipeline)
 
-
-def _ejecutar(nombre: str, timeout: int = 120) -> AppTest:
-    at = AppTest.from_file(str(PAGINAS / f"{nombre}.py"), default_timeout=timeout)
-    at.run()
-    assert not at.exception, f"{nombre}: {at.exception}"
-    return at
+SEL = ui.valores_por_defecto()
 
 
-@pytest.mark.parametrize("pagina", SIN_MODELOS)
-def test_pagina_carga_sin_errores(pagina):
-    _ejecutar(pagina)
+def _valor(salida):
+    """Valor de una salida que puede venir envuelta en un componente (``gr.Image(valor, label=...)``)."""
+    return salida.value if isinstance(salida, gr.components.Component) else salida
 
 
-def test_app_principal():
-    at = AppTest.from_file(str(PAGINAS.parent / "app.py"), default_timeout=60)
-    at.run()
-    assert not at.exception
+def test_app_se_construye():
+    demo = construir_app()
+    assert isinstance(demo, gr.Blocks)
 
 
-def test_calibracion_boton():
-    at = _ejecutar("1_calibracion")
-    at.button[0].click().run()
-    assert not at.exception
-    assert any("reproyección" in m.label for m in at.metric)
+def test_resolver_imagen_por_defecto():
+    img, nombre = ui.resolver_imagen(*SEL)
+    assert img.ndim == 3 and nombre == ui.MUESTRA_POR_DEFECTO
+
+
+def test_resolver_frame_de_video():
+    img, nombre = ui.resolver_imagen(ui.FUENTES[2], None, None, "rally_sintetico.mp4", None, 10)
+    assert img.ndim == 3 and nombre == "rally_sintetico.mp4"
+
+
+def test_subir_sin_archivo_da_error():
+    with pytest.raises(gr.Error):
+        ui.resolver_imagen(ui.FUENTES[1], None, None, None, None, 0)
+
+
+def test_calibracion_y_homografia():
+    estado = ui.estado_nuevo()
+    *_, estado = p1_calibracion.calibrar(p1_calibracion.FUENTES_TABLERO[0], None, 9, 6, 25.0, estado)
+    assert estado["calibracion"].error_rms < 0.5
+    antes, despues = p1_calibracion.corregir(estado["calibracion"].indices_validos[0], 0.0, estado)
+    assert antes.shape == despues.shape
+
+    vista, _ = p1_calibracion.homografia(*SEL, 30, 2.0, estado)
+    assert vista is None  # aún no hay esquinas
+    img, nombre = ui.resolver_imagen(*SEL)
+    estado["esquinas"][nombre] = ui.esquinas_ejemplo(nombre, img).tolist()
+    vista, texto = p1_calibracion.homografia(*SEL, 30, 2.0, estado)
+    assert vista.shape == (22 * 30, 13 * 30, 3) and "DLT" in texto
+
+
+@pytest.mark.parametrize("llamada", [
+    lambda: p2_filtros.suavizado(*SEL, "Bilateral", 9, "Sal y pimienta", 0, 75, 75),
+    lambda: p2_filtros.bordes(*SEL, 3, 50, 150, 5),
+    lambda: p2_filtros.convolucion(*SEL, "1 0 -1\n2 0 -2\n1 0 -1", "absoluto", True),
+    lambda: p2_filtros.lineas(*SEL, 9, 50, 150, 80, 60, 10),
+    lambda: p3_histogramas.histograma(*SEL, "HSV"),
+    lambda: p3_histogramas.ecualizacion(*SEL, 2.0, 8),
+    lambda: p3_histogramas.uniformes(*SEL, p3_histogramas.FUENTES_JUGADORES[0], "Bhattacharyya", None),
+    lambda: p4_umbralizacion.umbral_global(*SEL, 127, False),
+    lambda: p4_umbralizacion.otsu(*SEL),
+    lambda: p4_umbralizacion.adaptativo(*SEL, "gaussiano", 31, 5, True),
+    lambda: p4_umbralizacion.hsv(*SEL, 20, 35, 100, 255, 100, 255, False),
+    lambda: p5_morfologia.morfologia(*SEL, p5_morfologia.MASCARAS[1], 1.0, "Apertura", "Elipse", 5, 1, 3, 7, 40),
+    lambda: p6_segmentacion.kmeans(*SEL, 6, "Lab"),
+    lambda: p6_segmentacion.contornos(*SEL, 150),
+    lambda: p6_segmentacion.watershed(*SEL, p6_segmentacion.DEMOS_WS[1], 0.6),
+    lambda: p6_segmentacion.jugadores(*SEL, 6, 9, False),
+    lambda: p6_segmentacion.cajas_clasicas(*SEL),
+    lambda: p7_caracterizacion.opciones_regiones(*SEL, p7_caracterizacion.REGIONES[0]),
+    lambda: p7_caracterizacion.descriptores(*SEL, p7_caracterizacion.REGIONES[0], 0),
+    lambda: p7_caracterizacion.es_balon(*SEL, 0.78, 0.45, 0.85, 0.4),
+], ids=lambda f: "callback")
+def test_callbacks_clasicos(llamada):
+    salida = llamada()
+    assert salida is not None
+
+
+def test_otsu_manual_igual_a_opencv_en_ui():
+    tarjetas, *_ = p4_umbralizacion.otsu(*SEL)
+    assert "Diferencia</div><div class='val'>0<" in tarjetas
+
+
+def test_watershed_separa_los_balones_de_la_demo():
+    _, texto = p6_segmentacion.watershed(*SEL, p6_segmentacion.DEMOS_WS[1], 0.6)
+    assert "Contornos encontrarían **1**" in texto and "watershed encuentra **2**" in texto
+
+
+def test_jugadores_con_verdad():
+    texto, galeria = p6_segmentacion.jugadores(*SEL, 6, 9, False)
+    assert "Verdaderos positivos" in texto and len(galeria) == 3
+
+
+def test_proyeccion_a_la_cancha():
+    estado = ui.estado_nuevo()
+    *_, nota = p7_caracterizacion.proyeccion(*SEL, estado)
+    assert "Marca" in nota
+    img, nombre = ui.resolver_imagen(*SEL)
+    estado["esquinas"][nombre] = ui.esquinas_ejemplo(nombre, img).tolist()
+    apoyo, mapa, tabla, nota = p7_caracterizacion.proyeccion(*SEL, estado)
+    assert nota == "" and len(tabla) >= 1 and set(tabla["equipo"]) <= {"A", "B"}
+    assert isinstance(apoyo, np.ndarray) and _valor(mapa) is not None
 
 
 def test_pipeline_clasico_desde_ui():
-    at = _ejecutar("9_pipeline")
-    at.checkbox(key="pip_det").uncheck().run()
-    boton = next(b for b in at.button if "Ejecutar" in b.label)
-    boton.click().run()
-    assert not at.exception
-    assert any("Tiempo total" in m.label for m in at.metric)
+    estado = ui.estado_nuevo()
+    tarjetas, fig, pasos = p9_pipeline.ejecutar(*SEL, False, True, 2.0, 6, 9, False, None, 0.5, False, estado)
+    assert "Tiempo total" in tarjetas and len(pasos) == 7
+    assert pasos[-1].imagenes  # con las esquinas de ejemplo hay mapa cenital
+    assert "✅" in p9_pipeline.estado_esquinas(*SEL, True, estado)
 
 
 @pytest.mark.slow
 def test_pagina_transformers():
-    at = _ejecutar("8_transformers", timeout=600)
-    assert any("Personas" in m.label for m in at.metric)
+    nombre = next(iter(p8_transformers.tm.MODELOS_DETECCION))
+    dibujo, tarjetas, info, tabla = p8_transformers.deteccion(*SEL, nombre, 0.5)
+    assert "Personas" in tarjetas and "huggingface.co" in info
+    gal, tabla, fig, nota = p8_transformers.comparacion(*SEL, 0.5, list(p8_transformers.tm.MODELOS_DETECCION))
+    assert len(gal) == 3 and "tiempo (ms)" in tabla.columns

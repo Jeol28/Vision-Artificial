@@ -10,8 +10,8 @@
   avanzadas**: ábrelas antes de mostrarlos.
 - Tener abiertos en el editor `README.md` y la carpeta `volleyvision/`, y una terminal con
   `git log --oneline --graph --all` listo.
-- Imagen de ejemplo principal: `cancha_sintetica.jpg`. Foto real: `voleibol_03.jpg` (o la que mejor
-  se vea de `data/samples/descargadas/`).
+- Imagen de ejemplo principal: `marquette_01.jpg` (fotos reales de `data/samples/reales/`, que ya traen
+  las esquinas de la media cancha).
 
 ---
 
@@ -42,7 +42,7 @@ Abrir **ℹ️ Acerca del proyecto** y señalar la tabla del recorrido y el diag
 
 > "El código está en tres capas. En `core` cada tema es un módulo con funciones puras: reciben una
 > imagen y devuelven imágenes o datos, sin Gradio. La UI solo llama al core, y `utils` tiene la
-> carga de imágenes, el dibujo y un generador de escenas sintéticas con verdad conocida, que uso en
+> carga de imágenes, el dibujo y un generador de escenas sintéticas con verdad conocida, que uso solo en
 > las pruebas."
 
 - Mostrar el árbol de `volleyvision/` (core, ui, utils).
@@ -50,7 +50,7 @@ Abrir **ℹ️ Acerca del proyecto** y señalar la tabla del recorrido y el diag
   > "Trabajé con `main` estable, `develop` de integración y una rama `feature` por módulo, con
   > Conventional Commits y merges `--no-ff`, por eso cada rama queda visible en el historial. La
   > versión entregada tiene la etiqueta v2.2.0."
-- Ejecutar `pytest -q` y mostrar que pasan las 100 pruebas.
+- Ejecutar `pytest -q` y mostrar que pasan las 110 pruebas.
 
 ## 1:45 – 2:45 · Calibración
 
@@ -123,7 +123,7 @@ Abrir **ℹ️ Acerca del proyecto** y señalar la tabla del recorrido y el diag
 
 1. *K-means*: k = 5 en Lab.
 2. *Watershed*: demo de los dos balones que se tocan: contornos encuentra 1 objeto, watershed 2.
-3. *Jugadores (clásico)*: verde = acierto y rojo = error, usando la verdad de la escena sintética.
+3. *Jugadores (clásico)*: mostrar que en una foto real también salen jueces y público.
 4. *SegFormer*: activar y mostrar la clase "person" y el tiempo.
 5. *SAM*: hacer clic sobre el balón y luego sobre un jugador, y mostrar las 3 máscaras con su IoU estimado.
 
@@ -149,16 +149,14 @@ propios, solidez, Hu) y `es_balon`.
 
 **UI:** pestaña **8 · Transformers**.
 
-1. *Detección* con `voleibol_03.jpg`: RT-DETR detecta personas y el balón; cambiar a DETR.
+1. *Detección* con `marquette_01.jpg`: RT-DETR detecta a las jugadoras; cambiar a DETR.
 2. *Comparación* con la foto real: pulsar *Comparar* y mostrar las tres columnas y la gráfica de tiempos.
-   > "En la foto real el método clásico confunde al público con jugadores y no encuentra el balón; los
-   > transformers sí, y RT-DETR es más rápido que DETR."
+   > "En la foto real el método clásico confunde a jueces y público con jugadores; los transformers
+   > encuentran a las jugadoras, y RT-DETR es más rápido que DETR. El balón mide unos 6 píxeles desde
+   > la tribuna y casi nadie lo encuentra: es una limitación de esta toma."
 
    Si se graba desde el Space: "Aquí los modelos corren en una GPU de ZeroGPU que Hugging Face asigna
    solo durante la inferencia; el código está en `ui/modelos.py`, en las funciones con `@spaces.GPU`."
-3. *Comparación* con `cancha_sintetica.jpg`:
-   > "Aquí pasa lo contrario: los jugadores sintéticos son figuras geométricas y los transformers
-   > detectan pocos. Es un cambio de dominio, una de las limitaciones que documento en el README."
 
 ## 8:30 – 9:30 · Pipeline completo
 
@@ -166,10 +164,10 @@ propios, solidez, Hu) y `es_balon`.
 
 **UI:** pestaña **9 · Pipeline**.
 
-1. Fuente *Video (elegir frame)* → `rally_sintetico.mp4`, mover el slider de frame.
+1. Elegir otra foto de ejemplo (por ejemplo `marquette_05.jpg`, con Wisconsin en la media cancha cercana).
 2. Dejar **desactivada** *Corregir distorsión con la calibración* y explicar por qué:
-   > "Esta corrección solo se aplica a imágenes tomadas con la cámara que calibré; la escena sintética
-   > no tiene distorsión, así que corregirla la deformaría."
+   > "Esta corrección solo se aplica a imágenes tomadas con la cámara que calibré; estas fotos son de
+   > otra cámara, así que corregirlas con mi calibración las deformaría."
 
    Usar las esquinas de ejemplo, activar RT-DETR y ejecutar.
 3. Recorrer los pasos 1 a 7 y la gráfica de tiempo por etapa, y terminar en el mapa cenital.

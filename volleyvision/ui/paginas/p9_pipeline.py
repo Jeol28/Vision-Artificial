@@ -110,9 +110,10 @@ El pipeline (`core/pipeline.py` → `ejecutar_pipeline`) encadena los temas del 
 3. **Filtros**: bilateral + Canny + Hough para las líneas de la cancha.
 4. **Umbralización + morfología**: distancia al fondo con Otsu, rangos HSV del balón, apertura y cierre.
 5. **Segmentación**: contornos de la máscara clásica y, si se activa, {', '.join(tm.MODELOS_DETECCION)} / SegFormer.
-6. **Caracterización**: descriptores, reglas "¿es balón?" y equipos por histogramas H-S.
+6. **Caracterización**: descriptores, reglas "¿es balón?" y **solo tu equipo**: los que pisan tu media cancha
+   (con las esquinas) o, sin ellas, el grupo de camisetas (histogramas H-S) más cercano a la cámara.
 7. **Mapa cenital**: homografía (a partir de tu media cancha) aplicada al punto de apoyo de cada jugador;
-   tu campo queda abajo y el rival arriba, como lo ve la cámara trasera.
+   el mapa muestra tu media cancha, con la red arriba, como la ve la cámara trasera.
 
 Si hay detector transformer y encuentra personas, el mapa usa sus cajas; si no, las del método clásico.
 Con ZeroGPU, solo la ejecución con transformers pide GPU; la vía clásica corre en CPU.

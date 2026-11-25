@@ -22,13 +22,13 @@
 > "Hola, soy Jorge Enrique Olaya Liévano y este es mi proyecto final de Visión Artificial:
 > **VolleyVision**. Es una aplicación que analiza fotos y video de voleibol con un pipeline de visión
 > por computador, con la cámara detrás de la línea de fondo de mi equipo: se nos ve de espaldas, con
-> el número de la camiseta, y al rival de frente. Cada tema del curso es una etapa: calibración,
+> el número de la camiseta. Solo se analiza mi equipo: el rival queda lejos y tapado por la red. Cada tema del curso es una etapa: calibración,
 > filtros, histogramas, umbralización,
 > morfología, segmentación y caracterización. Al final comparo las técnicas clásicas con modelos
 > transformer de Hugging Face, que uso solo en inferencia con pesos públicos, sin entrenar nada."
 
-Pulsar **▶ Analizar** con la imagen de ejemplo y señalar el resumen, la foto con los equipos y el
-mapa de la cancha:
+Pulsar **▶ Analizar** con la imagen de ejemplo y señalar el resumen, la foto con mi equipo numerado y el
+mapa de mi media cancha:
 
 > "Para alguien que no sabe del tema basta con esto: elegir una imagen y pulsar Analizar. Abajo, en
 > *¿Cómo se hizo?*, se ven las 7 etapas y el tema del curso que usa cada una. Cada tema se puede
@@ -49,8 +49,8 @@ Abrir **ℹ️ Acerca del proyecto** y señalar la tabla del recorrido y el diag
 - Ejecutar `git log --oneline --graph --all`:
   > "Trabajé con `main` estable, `develop` de integración y una rama `feature` por módulo, con
   > Conventional Commits y merges `--no-ff`, por eso cada rama queda visible en el historial. La
-  > versión entregada tiene la etiqueta v2.0.0."
-- Ejecutar `pytest -q` y mostrar que pasan las 95 pruebas.
+  > versión entregada tiene la etiqueta v2.2.0."
+- Ejecutar `pytest -q` y mostrar que pasan las 100 pruebas.
 
 ## 1:45 – 2:45 · Calibración
 
@@ -91,7 +91,7 @@ Abrir **ℹ️ Acerca del proyecto** y señalar la tabla del recorrido y el diag
 
 1. *Ecualización y CLAHE*: comparar las tres imágenes y la métrica "desviación del brillo entre bloques".
    > "CLAHE corrige la iluminación desigual del coliseo sin amplificar el ruido."
-2. *Uniformes*: mostrar la matriz de Bhattacharyya y los equipos A/B.
+2. *Uniformes*: mostrar la matriz de Bhattacharyya: así se distingue mi equipo del rival cuando no hay esquinas.
 
 ## 4:10 – 4:50 · Umbralización
 
@@ -137,9 +137,10 @@ propios, solidez, Hu) y `es_balon`.
 1. *Descriptores*: seleccionar una región y mostrar centroide, caja y envolvente convexa.
 2. *¿Es balón?*: el balón sale en verde y las camisetas azules en rojo con su motivo; bajar la
    circularidad mínima para mostrar cómo cambian los aciertos.
-3. *Proyección a la cancha*: mapa cenital con mi equipo abajo y el rival arriba.
-   > "Uso el punto de los pies porque la homografía solo vale en el piso. Desde atrás, mi primera línea
-   > tapa a los rivales de la red: el método clásico une esas siluetas, y es una limitación de esta toma."
+3. *Proyección a la cancha*: mi equipo en naranja y numerado, el rival en gris (descartado); el mapa
+   muestra solo mi media cancha.
+   > "Uso el punto de los pies porque la homografía solo vale en el piso. Son de mi equipo los que pisan
+   > mi media cancha; al rival no lo analizo porque desde atrás queda lejos y tapado por la red."
 
 ## 7:20 – 8:30 · Transformers: clásico vs. transformer
 

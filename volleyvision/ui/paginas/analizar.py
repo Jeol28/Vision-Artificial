@@ -28,12 +28,13 @@ EXPLICACION_PASOS = {
     "5": ("Encontrar a los jugadores", "Segmentación (clásica y con inteligencia artificial)",
           "Cada mancha blanca con forma de persona es un jugador. Si activaste la inteligencia artificial, "
           "un modelo entrenado con miles de fotos también los busca."),
-    "6": ("Reconocer equipos y balón", "Caracterización",
-          "Se compara el color de las camisetas para separar los dos equipos, y se busca una forma redonda "
-          "amarilla para el balón."),
-    "7": ("Ubicar a cada jugador en la cancha", "Calibración (homografía)",
-          "Con las 4 esquinas se calcula cómo se vería la cancha desde arriba, y se coloca a cada jugador "
-          "según dónde tiene los pies."),
+    "6": ("Quedarse con tu equipo y buscar el balón", "Caracterización",
+          "Solo se analiza tu equipo: el rival está lejos y tapado por la red. Con las esquinas, son tuyos los "
+          "que pisan tu media cancha; sin ellas, el grupo de camisetas más cercano a la cámara. El balón es una "
+          "forma redonda amarilla."),
+    "7": ("Ubicar a tu equipo en la cancha", "Calibración (homografía)",
+          "Con las 4 esquinas se calcula cómo se vería tu media cancha desde arriba, y se coloca a cada "
+          "jugador según dónde tiene los pies: cerca de la red (ataque) o atrás (defensa)."),
 }
 
 
@@ -42,30 +43,34 @@ def estado_esquinas(*args):
     *vals, estado = args
     img, nombre = ui.resolver_imagen(*vals)
     if ui.esquinas_de(estado, nombre) is not None:
-        return "✅ Ya marcaste las 4 esquinas: el resultado incluirá el mapa de la cancha."
+        return "✅ Ya marcaste las 4 esquinas: el resultado incluirá el mapa de tu media cancha."
     if ui.esquinas_ejemplo(nombre, img) is not None:
-        return "✅ Esta imagen de ejemplo ya trae sus esquinas: el resultado incluirá el mapa de la cancha."
-    return ("ℹ️ Sin esquinas el análisis funciona igual, pero no podrá dibujar el mapa de la cancha. "
-            "Si quieres el mapa, ábrelas aquí abajo y haz 4 clics.")
+        return "✅ Esta imagen de ejemplo ya trae sus esquinas: el resultado incluirá el mapa de tu media cancha."
+    return ("ℹ️ Sin esquinas el análisis funciona igual, pero no podrá dibujar el mapa, y tu equipo se reconoce "
+            "solo por el color de la camiseta. Para un resultado más fiable, ábrelas aquí abajo y haz 4 clics.")
 
 
 def _resumen(pasos, usar_ia: bool) -> str:
     datos6 = pasos[5].datos
-    equipos = datos6.get("Jugadores por equipo", {"A": 0, "B": 0})
-    total = equipos.get("A", 0) + equipos.get("B", 0)
+    n = datos6.get("Jugadores de tu equipo", 0)
+    descartados = datos6.get("Descartados (rival o fuera de la cancha)", 0)
     balon = any(f.get("es_balón") for f in datos6.get("tabla_balon", [])) or \
         pasos[4].datos.get("Balones (transformer)", 0) > 0
-    lineas = [f"<b>Se encontraron {total} jugadores</b>: {equipos.get('A', 0)} de un equipo y "
-              f"{equipos.get('B', 0)} del otro (cada equipo se pinta con el color de su camiseta).",
-              "<b>Balón:</b> " + ("encontrado ✅" if balon else "no se encontró ❌")]
+    lineas = [f"<b>Se encontraron {n} jugadores de tu equipo</b> (numerados en la foto)."]
+    if descartados:
+        lineas.append(f"<span class='vv-nota'>Se ignoraron {descartados} personas del lado rival o fuera de la "
+                      "cancha: solo se analiza tu equipo.</span>")
+    lineas.append("<b>Balón:</b> " + ("encontrado ✅" if balon else "no se encontró ❌"))
     posiciones = pasos[6].datos.get("posiciones_m")
     if posiciones:
-        dentro = [p for p in posiciones if p["en cancha"]]
-        propios = sum(p["y (m)"] > 9 for p in dentro)
-        lineas.append(f"<b>En la cancha:</b> {propios} en tu lado (abajo en el mapa) y {len(dentro) - propios} "
-                      "en el lado rival (arriba).")
-    fuente = datos6.get("Fuente de jugadores")
-    if usar_ia and fuente == "clásico":
+        ataque = sum(p["zona"].startswith("ataque") for p in posiciones)
+        lineas.append(f"<b>En tu media cancha:</b> {ataque} en la zona de ataque (cerca de la red) y "
+                      f"{len(posiciones) - ataque} en la zona de defensa (atrás).")
+    elif n:
+        lineas.append("<span class='vv-nota'>Sin esquinas, tu equipo se reconoce por el color de la camiseta y por "
+                      "estar más cerca de la cámara; marca las esquinas para un resultado más fiable y el "
+                      "mapa.</span>")
+    if usar_ia and datos6.get("Fuente de jugadores") == "clásico":
         lineas.append("<span class='vv-nota'>La inteligencia artificial no reconoció personas en esta imagen "
                       "(pasa con dibujos como la escena de ejemplo), así que se usó el método clásico.</span>")
     tiempo = sum(p.tiempo_ms for p in pasos) / 1000
@@ -85,7 +90,7 @@ def analizar(*args):
         pasos = modelos.pipeline_con_modelos(img, cfg, DETECTOR, False)
     else:
         pasos = pl.ejecutar_pipeline(img, cfg)
-    anotada = ui.rgb(pasos[5].imagenes["Equipos y balón"])
+    anotada = ui.rgb(pasos[5].imagenes["Tu equipo y balón"])
     mapa = pasos[6].imagenes.get("Mapa de posiciones")
     return anotada, (ui.rgb(mapa) if mapa is not None else None), _resumen(pasos, bool(usar_ia)), pasos
 
@@ -93,8 +98,8 @@ def analizar(*args):
 def construir(estado: gr.State) -> None:
     gr.Markdown("# 🏐 Volley<span class='acento'>Vision</span>\n"
                 "Sube una foto o un video de un partido de voleibol tomado **desde detrás de tu equipo** y la "
-                "app encuentra a los jugadores, los separa por equipo, busca el balón y los ubica en un mapa "
-                "de la cancha.")
+                "app encuentra a **los jugadores de tu equipo**, busca el balón y los ubica en un mapa de tu "
+                "media cancha. El rival no se analiza: desde atrás queda lejos y tapado por la red.")
     gr.HTML("<div class='vv-paso'><span class='num'>1</span>Elige la imagen</div>")
     sel = ui.selector_imagen()
     E = sel.entradas
@@ -114,8 +119,8 @@ def construir(estado: gr.State) -> None:
 
     resumen = gr.HTML()
     with gr.Row():
-        anotada = ui.imagen_salida("Jugadores por equipo y balón")
-        mapa = ui.imagen_salida("Mapa de la cancha visto desde arriba")
+        anotada = ui.imagen_salida("Tu equipo y el balón")
+        mapa = ui.imagen_salida("Tu media cancha vista desde arriba")
     pasos = gr.State(None)
 
     @gr.render(inputs=pasos)

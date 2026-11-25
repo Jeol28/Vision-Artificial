@@ -6,7 +6,7 @@ import pandas as pd
 
 from volleyvision.core import calibracion as cal
 from volleyvision.core import caracterizacion as ca
-from volleyvision.core import histogramas as hi
+from volleyvision.core import pipeline as pl
 from volleyvision.core import segmentacion as sg
 from volleyvision.ui import componentes as ui
 from volleyvision.utils import visualizacion as vis
@@ -80,20 +80,28 @@ def proyeccion(*args):
         return None, None, None, ("Marca las 4 esquinas de tu media cancha para esta imagen (aquí abajo o en "
                                   "la pestaña de Calibración).")
     hom = cal.homografia_cancha(esquinas)
-    cajas = [r["caja"] for r in sg.segmentar_jugadores_clasico(img)["regiones"]]
-    proy = ca.proyectar_jugadores(cajas, hom)
-    equipos = hi.asignar_equipos(hi.histogramas_de_cajas(img, cajas))[0] if len(cajas) >= 2 else [0] * len(cajas)
-    colores = [vis.ROJO if e == 0 else vis.VERDE for e in equipos]
-    dibujo = vis.dibujar_cajas(img, [{"caja": c, "color": col} for c, col in zip(cajas, colores)])
-    for (x, y), col in zip(proy["puntos_imagen"], colores):
+    cajas = [r["caja"] for r in pl.jugadores_y_balon_clasico(img)["jugadores"]["regiones"]]
+    sel = ca.seleccionar_equipo_propio(cajas, hom=hom)
+    propios = [i for i, p in enumerate(sel["propio"]) if p]
+    numero = {i: n for n, i in enumerate(propios, 1)}
+    dibujo = img.copy()
+    for i, caja in enumerate(cajas):  # naranja = tu equipo; gris = descartado (rival o fuera de la cancha)
+        col = vis.NARANJA if i in numero else vis.NEUTRO
+        dibujo = vis.dibujar_cajas(dibujo, [{"caja": caja, "color": col,
+                                             "etiqueta": f"#{numero[i]}" if i in numero else "descartado"}])
+        x, y = ca.punto_apoyo(caja)
         cv2.circle(dibujo, (int(x), int(y)), 5, col, -1)
     dibujo = vis.dibujar_puntos(dibujo, esquinas, vis.NARANJA, numerar=False, cerrar=True)
-    pos = [tuple(p) for p, d in zip(proy["metros"], proy["dentro"]) if d]
-    cols = [c for c, d in zip(colores, proy["dentro"]) if d]
-    mapa = gr.Image(ui.rgb(vis.dibujar_cancha_cenital(pos, cols)), label=f"Mapa cenital: {len(pos)} jugadores en cancha")
-    tabla = pd.DataFrame([{"jugador": i + 1, "equipo": "AB"[e], "x (m)": round(float(p[0]), 2),
-                           "y (m)": round(float(p[1]), 2), "en cancha": bool(d)}
-                          for i, (p, e, d) in enumerate(zip(proy["metros"], equipos, proy["dentro"]))])
+    pos = [tuple(sel["metros"][i]) for i in propios]
+    mapa = gr.Image(ui.rgb(vis.dibujar_cancha_cenital(pos, [vis.NARANJA] * len(pos),
+                                                       etiquetas=[f"#{n}" for n in range(1, len(pos) + 1)],
+                                                       solo_propia=True)),
+                    label=f"Mapa cenital: {len(pos)} jugadores de tu equipo")
+    tabla = pd.DataFrame([{"caja": i + 1, "¿tu equipo?": f"sí (#{numero[i]})" if i in numero else "no",
+                           "x (m)": round(float(m[0]), 2), "y (m)": round(float(m[1]), 2),
+                           "zona": ca.zona_propia(float(m[1])) if i in numero else
+                           ("lado rival" if d else "fuera de la cancha")}
+                          for i, (m, d) in enumerate(zip(sel["metros"], sel["dentro"]))])
     return ui.rgb(dibujo), mapa, tabla, ""
 
 
@@ -102,7 +110,7 @@ def construir(estado: gr.State) -> None:
                                          "cancha.")
     ui.en_pocas_palabras("caracterizar es medir cada objeto encontrado (tamaño, qué tan redondo es, su color) "
                          "para decidir qué es: una forma redonda y amarilla es el balón; una alta y angosta, un "
-                         "jugador. Al final se ubica a cada jugador en un mapa de la cancha.")
+                         "jugador. Al final se ubica a cada jugador de tu equipo en un mapa de tu media cancha.")
     sel = ui.selector_imagen()
     E = sel.entradas
     with gr.Tabs():
@@ -158,7 +166,7 @@ umbrales para ver cómo cambian los aciertos.
         with gr.Tab("Proyección a la cancha"):
             nota_p = ui.md()
             with gr.Row():
-                apoyo = ui.imagen_salida("Punto de apoyo de cada jugador")
+                apoyo = ui.imagen_salida("Naranja = tu equipo · gris = descartado (rival o fuera)")
                 mapa = ui.imagen_salida("Mapa cenital")
             tabla_p = gr.Dataframe(interactive=False)
             with gr.Accordion("Marcar las esquinas de la media cancha", open=False):
@@ -167,7 +175,8 @@ umbrales para ver cómo cambian los aciertos.
 Con la homografía $H$ de la pestaña de calibración, cada punto de la imagen se lleva a metros:
 $[X, Y, 1]^\top \sim H\,[u, v, 1]^\top$. Se proyecta el **punto de apoyo** (centro inferior de la caja,
 donde están los pies) porque $H$ solo es válida para puntos del **plano del piso**. El centroide está a
-~1 m de altura y daría posiciones desplazadas hacia el fondo. Los colores son los equipos obtenidos con
-la comparación de histogramas de la pestaña 3.
+~1 m de altura y daría posiciones desplazadas hacia el fondo. Solo se analiza **tu equipo**: son tuyos
+los que pisan tu media cancha ($Y \ge 9$ m, la red está en $Y = 9$); el rival queda lejos y tapado por la
+red, así que se descarta (cajas grises).
 """)
             gr.on(None, proyeccion, E + [estado], [apoyo, mapa, tabla_p, nota_p], trigger_mode="always_last")

@@ -7,8 +7,8 @@ Encadena los temas del curso sobre una imagen o un frame de video:
 3. Filtrado (bilateral + Canny + Hough para las líneas)
 4. Umbralización + morfología (máscaras del balón y de los jugadores)
 5. Segmentación clásica y transformer
-6. Caracterización (descriptores, balón y equipos)
-7. Mapa cenital de las posiciones (homografía)
+6. Caracterización (descriptores, balón y equipo propio)
+7. Mapa cenital de tu equipo (homografía)
 
 Cada paso devuelve un :class:`Paso` con sus imágenes intermedias, datos y tiempo,
 para que la UI pueda mostrar el resultado de cada etapa.
@@ -63,6 +63,29 @@ def _cronometro():
     return lambda: (time.perf_counter() - t0) * 1e3
 
 
+def jugadores_y_balon_clasico(img: np.ndarray, config: ConfigPipeline | None = None) -> dict:
+    """Vía clásica de los pasos 4 y 5: balón por color y forma, y jugadores por Otsu + morfología.
+
+    Para segmentar por color se usa la imagen sin CLAHE (altera los tonos ligeramente); el bilateral sí
+    ayuda a homogeneizar el piso. El balón se excluye de la máscara de jugadores.
+
+    Returns:
+        ``base`` (imagen filtrada), ``candidatos`` (a balón) y ``jugadores`` (de
+        :func:`segmentacion.segmentar_jugadores_clasico`).
+    """
+    cfg = config or ConfigPipeline()
+    base = fi.filtro_bilateral(img, cfg.d_bilateral, 40, 40)
+    candidatos = ca.detectar_balon_clasico(base)
+    excluir = np.zeros(img.shape[:2], np.uint8)
+    for b in candidatos:
+        if b["es_balon"]:
+            cv2.drawContours(excluir, [b["contorno"]], -1, 255, -1)
+    excluir = cv2.dilate(excluir, np.ones((7, 7), np.uint8))
+    jug = sg.segmentar_jugadores_clasico(base, k=cfg.k_kmeans, tam_cierre=cfg.tam_cierre,
+                                         area_min=cfg.area_min, mascara_excluir=excluir)
+    return {"base": base, "candidatos": candidatos, "jugadores": jug}
+
+
 def ejecutar_pipeline(img: np.ndarray, config: ConfigPipeline | None = None,
                       detector: tm.ModeloCargado | None = None,
                       segformer: tm.ModeloCargado | None = None) -> list[Paso]:
@@ -106,21 +129,11 @@ def ejecutar_pipeline(img: np.ndarray, config: ConfigPipeline | None = None,
     pasos.append(Paso("3. Filtrado y bordes", {"Bilateral": lineas["suavizada"], "Canny": lineas["bordes"],
                                                "Líneas (Hough)": lineas["lineas"]},
                       {"Segmentos de línea": len(lineas["segmentos"])}, t()))
-    # Para segmentar por color se usa la imagen corregida (CLAHE altera los tonos
-    # ligeramente); el bilateral sí ayuda a homogeneizar el piso.
-    base = fi.filtro_bilateral(corregida, cfg.d_bilateral, 40, 40)
-
     # 4. Umbralización + morfología ------------------------------------------
     t = _cronometro()
+    clasico = jugadores_y_balon_clasico(corregida, cfg)
+    base, candidatos, jug = clasico["base"], clasico["candidatos"], clasico["jugadores"]
     cand_balon = ca.mascara_candidatos_balon(base)
-    candidatos = ca.detectar_balon_clasico(base)
-    balones = [c for c in candidatos if c["es_balon"]]
-    excluir = np.zeros(img.shape[:2], np.uint8)
-    for b in balones:
-        cv2.drawContours(excluir, [b["contorno"]], -1, 255, -1)
-    excluir = cv2.dilate(excluir, np.ones((7, 7), np.uint8))
-    jug = sg.segmentar_jugadores_clasico(base, k=cfg.k_kmeans, tam_cierre=cfg.tam_cierre,
-                                         area_min=cfg.area_min, mascara_excluir=excluir)
     pasos.append(Paso("4. Umbralización + morfología", {
         "Distancia al fondo": jug["kmeans"]["distancia"], "Otsu (cruda)": jug["mascara_cruda"],
         "Apertura + cierre": jug["mascara"], "Candidatos a balón (HSV + cierre)": cand_balon},
@@ -148,21 +161,26 @@ def ejecutar_pipeline(img: np.ndarray, config: ConfigPipeline | None = None,
         datos5["Tiempo SegFormer (ms)"] = sem["tiempo_ms"]
     pasos.append(Paso("5. Segmentación (clásica y transformer)", imgs5, datos5, t()))
 
-    # 6. Caracterización ------------------------------------------------------
+    # 6. Caracterización: solo el equipo propio --------------------------------
     t = _cronometro()
     usar_tr = detector is not None and len(personas_tr) > 0
     cajas = [d["caja"] for d in personas_tr] if usar_tr else [r["caja"] for r in jug["regiones"]]
     descriptores = [ca.describir_region(r["contorno"]) for r in jug["regiones"]]
     equipos, _ = hi.asignar_equipos(hi.histogramas_de_cajas(corregida, cajas), cfg.metrica_histograma) \
         if len(cajas) >= 2 else ([0] * len(cajas), None)
-    colores_eq = _colores_equipos(corregida, cajas, equipos)
+    hom = cal.homografia_cancha(esquinas) if esquinas is not None else None
+    sel = ca.seleccionar_equipo_propio(cajas, equipos, hom)
+    indices = [i for i, p in enumerate(sel["propio"]) if p]  # orden de izquierda a derecha y de la red hacia atrás
+    indices.sort(key=lambda i: (round(ca.punto_apoyo(cajas[i])[1] / 60), ca.punto_apoyo(cajas[i])[0]))
+    propias = [cajas[i] for i in indices]
+    color = _color_equipo(corregida, propias)
     anotada = corregida.copy()
-    for caja, e in zip(cajas, equipos):
-        anotada = vis.dibujar_cajas(anotada, [{"caja": caja, "etiqueta": f"Eq. {'AB'[e]}", "color": colores_eq[e]}])
-    for c in candidatos:
-        color = vis.VERDE if c["es_balon"] else vis.ROJO
-        cv2.drawContours(anotada, [c["contorno"]], -1, color, 2)
-    pasos.append(Paso("6. Caracterización", {"Equipos y balón": anotada}, {
+    for n, caja in enumerate(propias, 1):
+        anotada = vis.dibujar_cajas(anotada, [{"caja": caja, "etiqueta": f"#{n}", "color": color}])
+    for c in candidatos:  # solo el balón: los candidatos descartados están en la tabla (y en la pestaña 7)
+        if c["es_balon"]:
+            cv2.drawContours(anotada, [c["contorno"]], -1, vis.VERDE, 2)
+    pasos.append(Paso("6. Caracterización", {"Tu equipo y balón": anotada}, {
         "tabla_jugadores": ca.tabla_descriptores(descriptores),
         "tabla_balon": [{"id": i + 1, "es_balón": c["es_balon"], "circularidad": round(c["circularidad"], 3),
                          "excentricidad": round(c["excentricidad"], 3), "solidez": round(c["solidez"], 3),
@@ -170,23 +188,23 @@ def ejecutar_pipeline(img: np.ndarray, config: ConfigPipeline | None = None,
                          "motivos": "; ".join(c["motivos"]) or "cumple todas las reglas"}
                         for i, c in enumerate(candidatos)],
         "Fuente de jugadores": "transformer" if usar_tr else "clásico",
-        "Jugadores por equipo": {"A": equipos.count(0), "B": equipos.count(1)}}, t(),
-        "Verde = balón, rojo = candidato descartado; cajas coloreadas con el color medio del uniforme."))
+        "Jugadores de tu equipo": len(propias),
+        "Descartados (rival o fuera de la cancha)": len(cajas) - len(propias),
+        "Criterio para tu equipo": sel["criterio"]}, t(),
+        "Solo se analiza tu equipo (el rival está lejos y tapado por la red). Verde = balón; las cajas llevan "
+        "el color medio de tu uniforme."))
 
     # 7. Mapa cenital ---------------------------------------------------------
     t = _cronometro()
-    if esquinas is not None:
-        hom = cal.homografia_cancha(esquinas)
-        proy = ca.proyectar_jugadores(cajas, hom)
-        dentro = proy["dentro"]
-        pos = [tuple(p) for p, d in zip(proy["metros"], dentro) if d]
-        cols = [colores_eq[e] for e, d in zip(equipos, dentro) if d]
-        mapa = vis.dibujar_cancha_cenital(pos, cols)
+    if hom is not None:
+        metros = sel["metros"][indices] if indices else np.zeros((0, 2))
+        mapa = vis.dibujar_cancha_cenital([tuple(m) for m in metros], [color] * len(metros),
+                                          etiquetas=[f"#{n}" for n in range(1, len(metros) + 1)], solo_propia=True)
         rect = cal.vista_cenital(corregida, hom)
         pasos.append(Paso("7. Mapa cenital", {"Vista cenital (warpPerspective)": rect, "Mapa de posiciones": mapa}, {
-            "posiciones_m": [{"jugador": i + 1, "equipo": "AB"[equipos[i]], "x (m)": round(float(p[0]), 2),
-                              "y (m)": round(float(p[1]), 2), "en cancha": bool(dentro[i])}
-                             for i, p in enumerate(proy["metros"])]}, t(),
+            "posiciones_m": [{"jugador": f"#{n}", "x (m)": round(float(m[0]), 2), "y (m)": round(float(m[1]), 2),
+                              "zona": ca.zona_propia(float(m[1]))}
+                             for n, m in enumerate(metros, 1)]}, t(),
             "Se proyecta el punto de apoyo (pies) porque la homografía solo vale para el plano del piso."))
     else:
         pasos.append(Paso("7. Mapa cenital", {}, {}, t(),
@@ -194,14 +212,11 @@ def ejecutar_pipeline(img: np.ndarray, config: ConfigPipeline | None = None,
     return pasos
 
 
-def _colores_equipos(img, cajas, equipos) -> dict[int, tuple[int, int, int]]:
-    """Color representativo (mediana del torso) de cada equipo, aclarado para que se vea en el mapa."""
-    colores = {0: vis.ROJO, 1: vis.VERDE}
-    for e in (0, 1):
-        muestras = [hi.color_dominante(img, c) for c, q in zip(cajas, equipos) if q == e]
-        if muestras:
-            bgr = np.median(np.array(muestras), axis=0).astype(np.uint8)
-            hsv = cv2.cvtColor(bgr[None, None], cv2.COLOR_BGR2HSV)[0, 0]
-            hsv[2] = max(int(hsv[2]), 170)
-            colores[e] = tuple(int(v) for v in cv2.cvtColor(hsv[None, None], cv2.COLOR_HSV2BGR)[0, 0])
-    return colores
+def _color_equipo(img, cajas) -> tuple[int, int, int]:
+    """Color representativo (mediana del torso) del equipo propio, aclarado para que se vea en el mapa."""
+    if not cajas:
+        return vis.NARANJA
+    bgr = np.median(np.array([hi.color_dominante(img, c) for c in cajas]), axis=0).astype(np.uint8)
+    hsv = cv2.cvtColor(bgr[None, None], cv2.COLOR_BGR2HSV)[0, 0]
+    hsv[2] = max(int(hsv[2]), 170)
+    return tuple(int(v) for v in cv2.cvtColor(hsv[None, None], cv2.COLOR_HSV2BGR)[0, 0])

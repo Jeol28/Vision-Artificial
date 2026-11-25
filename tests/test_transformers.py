@@ -29,10 +29,12 @@ def test_pipeline_clasico_completo(escena):
     assert [p.nombre[0] for p in pasos] == list("1234567")
     mapa = pasos[-1]
     assert "Mapa de posiciones" in mapa.imagenes
-    dentro = [p for p in mapa.datos["posiciones_m"] if p["en cancha"]]
-    assert len(dentro) >= 7
-    eq = pasos[5].datos["Jugadores por equipo"]
-    assert min(eq.values()) >= 3  # aparecen los dos equipos
+    propios = mapa.datos["posiciones_m"]
+    assert len(propios) >= 4  # solo tu equipo (6 en la escena; el clásico une a algunos de la red)
+    assert all(p["y (m)"] >= 8.5 for p in propios)  # todos en tu media cancha
+    datos = pasos[5].datos
+    assert datos["Jugadores de tu equipo"] == len(propios)
+    assert datos["Descartados (rival o fuera de la cancha)"] >= 1  # el rival no se analiza
 
 
 def test_pipeline_con_calibracion(escena, vistas_tablero):

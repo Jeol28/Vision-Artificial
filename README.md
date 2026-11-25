@@ -22,7 +22,8 @@ short_description: Pipeline de visión por computador para voleibol
 VolleyVision analiza fotos y video de un partido de voleibol con un **pipeline de visión por computador**.
 La cámara se ubica **detrás de la línea de fondo del equipo propio** (vista trasera), de modo que se
 ve al equipo propio de espaldas, con el número de la camiseta visible, y al rival de frente al otro lado
-de la red. Cada tema del curso es una etapa del pipeline: calibración de la cámara, filtros, histogramas,
+de la red. **Solo se analiza el equipo propio**: desde atrás el rival queda lejos, pequeño y tapado por
+la red, así que se descarta. Cada tema del curso es una etapa del pipeline: calibración de la cámara, filtros, histogramas,
 umbralización, morfología matemática, segmentación y caracterización. Al final se comparan las técnicas
 clásicas con **modelos transformer** de Hugging Face (RT-DETR, DETR, SegFormer y SAM).
 
@@ -55,7 +56,7 @@ ZeroGPU); las demás, de la app local con el mismo código.
 
 | Analizar partido (modo guiado) | Calibración y homografía |
 |---|---|
-| ![Analizar partido: resultado en lenguaje sencillo y mapa de la cancha](docs/capturas/analizar.png) | ![Homografía de la media cancha y vista cenital](docs/capturas/calibracion.png) |
+| ![Analizar partido: resultado en lenguaje sencillo, tu equipo numerado y el mapa de tu media cancha](docs/capturas/analizar.png) | ![Homografía de la media cancha y vista cenital](docs/capturas/calibracion.png) |
 | **Transformers (clásico vs. RT-DETR vs. DETR)** | **Pipeline completo (mapa cenital)** |
 | ![Comparación clásico vs. transformer](docs/capturas/transformers.png) | ![Pipeline: paso 7, mapa cenital](docs/capturas/pipeline.png) |
 
@@ -97,7 +98,7 @@ sabe de visión artificial. Tiene tres secciones:
 
 | Sección | Para qué sirve |
 |---|---|
-| 🏐 **Analizar partido** | Modo guiado en 3 pasos: elegir la imagen → marcar las 4 esquinas de la media cancha (opcional) → **Analizar**. El resultado sale en lenguaje sencillo (jugadores por equipo, balón y en qué lado de la cancha está cada uno) junto con la foto anotada y el mapa visto desde arriba. Un desplegable *¿Cómo se hizo?* muestra las 7 etapas y el tema del curso que usa cada una. |
+| 🏐 **Analizar partido** | Modo guiado en 3 pasos: elegir la imagen → marcar las 4 esquinas de la media cancha (opcional) → **Analizar**. El resultado sale en lenguaje sencillo (cuántos jugadores de tu equipo hay, si está el balón y cuántos están en la zona de ataque o de defensa) junto con la foto anotada y el mapa de tu media cancha visto desde arriba. El rival se ignora. Un desplegable *¿Cómo se hizo?* muestra las 7 etapas y el tema del curso que usa cada una. |
 | 📚 **Temas del curso** | Una pestaña por tema (1 · Calibración … 9 · Pipeline). Cada una empieza con un recuadro **"En pocas palabras"**, deja a la vista solo los controles principales, guarda el resto en **⚙️ Opciones avanzadas** y tiene la teoría con fórmulas en **"¿Qué está pasando?"**. |
 | ℹ️ **Acerca del proyecto** | Autor, recorrido, pipeline y arquitectura. |
 
@@ -143,9 +144,9 @@ Se usa un flujo tipo **Git Flow simplificado**:
 
 | Rama | Propósito |
 |---|---|
-| `main` | Versión estable y entregable. Solo recibe merges desde `develop` y se etiqueta en cada versión (`v1.0.0`, `v1.1.0`, `v2.0.0`, `v2.0.1`, `v2.1.0`). |
+| `main` | Versión estable y entregable. Solo recibe merges desde `develop` y se etiqueta en cada versión (`v1.0.0`, `v1.1.0`, `v2.0.0`, `v2.0.1`, `v2.1.0`, `v2.2.0`). |
 | `develop` | Rama de integración: aquí se juntan los módulos terminados y probados. |
-| `feature/<tema>` | Una rama por módulo del curso: `feature/calibracion`, `feature/filtros`, `feature/histogramas`, `feature/umbralizacion`, `feature/morfologia`, `feature/segmentacion`, `feature/caracterizacion`, `feature/transformers`, `feature/ui` (y `feature/docs` para la documentación). Los cambios posteriores siguen el mismo flujo: `feature/camara-trasera` cambió la cámara a la vista trasera (`v1.1.0`) y `feature/gradio-zerogpu` pasó la interfaz a Gradio con ZeroGPU (`v2.0.0`); `feature/ui-sencilla` agregó el modo guiado para no expertos (`v2.1.0`). |
+| `feature/<tema>` | Una rama por módulo del curso: `feature/calibracion`, `feature/filtros`, `feature/histogramas`, `feature/umbralizacion`, `feature/morfologia`, `feature/segmentacion`, `feature/caracterizacion`, `feature/transformers`, `feature/ui` (y `feature/docs` para la documentación). Los cambios posteriores siguen el mismo flujo: `feature/camara-trasera` cambió la cámara a la vista trasera (`v1.1.0`) y `feature/gradio-zerogpu` pasó la interfaz a Gradio con ZeroGPU (`v2.0.0`); `feature/ui-sencilla` agregó el modo guiado para no expertos (`v2.1.0`) y `feature/solo-mi-equipo` hizo que solo se analice el equipo propio (`v2.2.0`). |
 
 Reglas:
 
@@ -262,6 +263,15 @@ gitGraph
     merge feature/ui-sencilla
     checkout main
     merge develop tag: "v2.1.0"
+    checkout develop
+    branch feature/solo-mi-equipo
+    checkout feature/solo-mi-equipo
+    commit id: "feat: analizar solo el equipo propio"
+    commit id: "test: equipo propio"
+    checkout develop
+    merge feature/solo-mi-equipo
+    checkout main
+    merge develop tag: "v2.2.0"
 ```
 
 Para ver el historial real: `git log --oneline --graph --all`.
@@ -317,7 +327,7 @@ flowchart LR
     D --> E["4 · Otsu / HSV<br/>+ apertura y cierre<br/><i>umbralizacion, morfologia</i>"]
     E --> F1["5a · Segmentación clásica<br/>k-means, contornos, watershed"]
     E --> F2["5b · Segmentación transformer<br/>RT-DETR / DETR, SegFormer"]
-    F1 --> G["6 · Caracterización<br/>descriptores, ¿es balón?,<br/>equipos por histograma"]
+    F1 --> G["6 · Caracterización<br/>descriptores, ¿es balón?,<br/>solo tu equipo"]
     F2 --> G
     G --> H["7 · Mapa cenital<br/>homografía de la cancha"]
 ```
@@ -341,7 +351,7 @@ VolleyVision/
 │   └── utils/                # io.py, visualizacion.py, sinteticos.py
 ├── data/samples/             # cancha y video sintéticos, tablero (descargadas/ se ignora)
 ├── scripts/                  # generar_sinteticos.py, download_samples.py
-├── tests/                    # pytest (100 pruebas)
+├── tests/                    # pytest (103 pruebas)
 ├── docs/                     # arquitectura, guion del video, capturas
 ├── app.py                    # punto de entrada (local y Hugging Face Spaces)
 ├── requirements.txt  ├── pytest.ini  ├── LICENSE  └── README.md
@@ -355,11 +365,11 @@ VolleyVision/
 |---|---|---|
 | `calibracion` | Calibración de Zhang con tablero de ajedrez (K, distorsión, error de reproyección), corrección de distorsión y homografía de la cancha desde la **cámara trasera**: con las 4 esquinas de la media cancha propia (9 × 9 m) se obtiene la homografía de todo el piso y la vista cenital de la cancha de 9 × 18 m. Modelo pinhole explicado en los docstrings. Incluye DLT propia comparada con OpenCV. | `calibrar_camara`, `corregir_distorsion`, `homografia_cancha`, `homografia_dlt`, `vista_cenital` |
 | `filtros` | Promedio, gaussiano, mediana y bilateral; Sobel, Laplaciano y Canny; convolución manual (NumPy) comparada con `cv2.filter2D`; realce de las líneas de la cancha (bilateral + Canny + Hough). | `suavizar`, `sobel`, `canny`, `convolucion_manual`, `resaltar_lineas_cancha` |
-| `histogramas` | Histogramas RGB/HSV, ecualización global (y manual con la CDF), CLAHE para la iluminación del coliseo y comparación H-S de uniformes con `cv2.compareHist` para asignar equipos. | `calcular_histograma`, `ecualizar_manual`, `aplicar_clahe`, `asignar_equipos` |
+| `histogramas` | Histogramas RGB/HSV, ecualización global (y manual con la CDF), CLAHE para la iluminación del coliseo y comparación H-S de uniformes con `cv2.compareHist` para separar tu equipo del rival. | `calcular_histograma`, `ecualizar_manual`, `aplicar_clahe`, `asignar_equipos` |
 | `umbralizacion` | Umbral global, **Otsu implementado a mano** con la curva σ²_B(t), Otsu de OpenCV, umbral adaptativo (media y gaussiano) y rangos HSV para el balón y la cancha. | `otsu_manual`, `umbral_adaptativo`, `umbral_hsv` |
 | `morfologia` | Erosión, dilatación, apertura, cierre, gradiente, top-hat y black-hat con elemento estructurante configurable; versiones manuales (mín/máx); limpieza de las máscaras del balón y los jugadores. | `elemento_estructurante`, `aplicar`, `erosion_manual`, `limpiar_mascara` |
 | `segmentacion` | Contornos, watershed con transformada de distancia, k-means en color y detección clásica de jugadores (modelo de fondo + Otsu + cierre vertical). Métricas IoU. | `encontrar_contornos`, `watershed_distancia`, `kmeans_color`, `segmentar_jugadores_clasico` |
-| `caracterizacion` | Área, perímetro, centroide, caja, circularidad, excentricidad, solidez y momentos de Hu; clasificador por reglas "¿es balón?"; proyección del punto de apoyo de los jugadores a la vista cenital. | `describir_region`, `detectar_balon_clasico`, `proyectar_jugadores` |
+| `caracterizacion` | Área, perímetro, centroide, caja, circularidad, excentricidad, solidez y momentos de Hu; clasificador por reglas "¿es balón?"; proyección del punto de apoyo de los jugadores a la vista cenital; selección del **equipo propio** (los que pisan tu media cancha o, sin esquinas, el grupo de camisetas más cercano a la cámara). | `describir_region`, `detectar_balon_clasico`, `proyectar_jugadores`, `seleccionar_equipo_propio` |
 | `transformers_models` | RT-DETR / DETR (personas y `sports ball`), SegFormer (segmentación semántica), SlimSAM / SAM (segmentación por punto o caja) y la comparación clásico vs. transformer con tiempos. | `detectar_objetos`, `segmentar_semantica`, `segmentar_con_sam`, `comparar_metodos` |
 | `pipeline` | Encadena las 7 etapas y devuelve el resultado de cada una. | `ejecutar_pipeline` |
 
@@ -385,7 +395,7 @@ compara los tiempos en tu máquina.
 ## Pruebas
 
 ```bash
-pytest                 # 97 pruebas rápidas (sin descargar modelos)
+pytest                 # 100 pruebas rápidas (sin descargar modelos)
 pytest -m slow         # 3 pruebas que descargan y ejecutan los modelos de Hugging Face
 ```
 
@@ -399,11 +409,13 @@ Qué se verifica, entre otras cosas:
 - Watershed separa objetos que se tocan; las excentricidades coinciden con scikit-image; Hu es
   invariante a rotación y escala.
 - La homografía de la media cancha ubica al equipo propio con error < 10 cm y al rival con error < 40 cm.
-- El pipeline clásico encuentra ≥ 7 de los 12 jugadores sintéticos (la vista trasera tiene oclusiones),
-  el balón y los dos equipos.
+- Con la homografía, la selección del equipo propio coincide exactamente con la verdad de la escena
+  sintética; sin ella, elige el grupo de camisetas más cercano a la cámara.
+- El pipeline clásico se queda solo con el equipo propio (todos en la media cancha propia), descarta al
+  rival y encuentra el balón.
 - La app de Gradio se construye y cada callback de la UI se ejecuta sin excepciones con la escena
-  sintética (sin levantar el servidor); el modo guiado da un resumen con jugadores, balón y lado de la
-  cancha, y sin esquinas no dibuja el mapa.
+  sintética (sin levantar el servidor); el modo guiado da un resumen con los jugadores de tu equipo,
+  el balón y su zona (ataque o defensa), y sin esquinas no dibuja el mapa.
 
 ---
 
@@ -428,20 +440,21 @@ Qué se verifica, entre otras cosas:
   público con jugadores.
 - **Segmentación clásica de jugadores**: supone que los colores dominantes son el fondo (piso, zona
   libre, gradas). Falla con público muy colorido, jugadores superpuestos o colores parecidos al piso.
-- **Oclusiones de la cámara trasera**: la primera línea propia tapa en parte a los rivales que están en
-  la red. El método clásico une esas siluetas (encuentra 7–8 de 12 jugadores en las escenas sintéticas)
-  y la caja unida puede quedar asignada al equipo equivocado. Una cámara elevada (tribuna o trípode alto)
-  reduce el problema.
+- **Solo el equipo propio**: el rival no se analiza; desde atrás queda lejos y tapado por la red y por la
+  primera línea propia. Con las esquinas, son propios los que pisan la media cancha propia (con 0,5 m de
+  margen en la red); sin ellas, el grupo de camisetas con los pies más abajo en la imagen.
+- **Oclusiones de la cámara trasera**: el método clásico puede unir a dos jugadores propios que se tapan
+  (encuentra 5–6 de los 6 propios en las escenas sintéticas). Una cámara elevada (tribuna o trípode
+  alto) reduce el problema.
 - **Balón**: los rangos HSV están pensados para balones amarillo/azul; otros colores requieren ajustar
   los sliders.
 - **Homografía**: supone el piso plano y las 4 esquinas de la media cancha propia visibles (las dos de la
-  línea central bajo la red y las dos de la línea de fondo propia). Los rivales se ubican con menos
-  precisión porque están más lejos (cada píxel abarca más metros). Solo los puntos del piso se proyectan
+  línea central bajo la red y las dos de la línea de fondo propia). Solo los puntos del piso se proyectan
   bien: un balón en el aire no se puede ubicar en el mapa cenital con una sola cámara.
 - **Calibración**: el ejemplo usa un tablero sintético. Para una cámara real hay que fotografiar un
   tablero impreso con esa misma cámara y resolución.
-- **Equipos**: se asume que hay dos uniformes de colores distintos; el líbero y los árbitros pueden
-  quedar mal asignados.
+- **Sin esquinas**: el equipo propio se reconoce por el color de la camiseta, así que se asume que los dos
+  uniformes son de colores distintos; el líbero y los árbitros pueden quedar mal asignados.
 - **Video**: se procesa frame por frame, sin seguimiento (*tracking*) entre frames.
 - **Recursos**: la primera ejecución descarga unos 850 MB de pesos si se usan todos los modelos; SAM
   ViT-B es lento en CPU (por eso SlimSAM va por defecto).

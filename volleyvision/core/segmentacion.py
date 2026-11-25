@@ -173,8 +173,12 @@ def mascara_primer_plano_kmeans(img: np.ndarray, k: int = 4, frac_fondo: float =
     return mascara, km
 
 
-def mascara_lineas_blancas(img: np.ndarray, s_max: int = 50, v_min: int = 170) -> np.ndarray:
-    """Píxeles blancos (poca saturación, mucho brillo): líneas de la cancha y red."""
+def mascara_lineas_blancas(img: np.ndarray, s_max: int = 70, v_min: int = 150) -> np.ndarray:
+    """Píxeles blancos (poca saturación, mucho brillo): líneas de la cancha y red.
+
+    Los umbrales son algo holgados porque la compresión JPG y el filtro bilateral tiñen las líneas con el
+    naranja del piso; si una línea queda en la máscara, el cierre vertical la une a los jugadores.
+    """
     hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
     return ((hsv[..., 1] <= s_max) & (hsv[..., 2] >= v_min)).astype(np.uint8) * 255
 

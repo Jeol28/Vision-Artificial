@@ -78,3 +78,24 @@ def test_proyeccion_de_jugadores(escena):
 def test_tabla_descriptores():
     filas = ca.tabla_descriptores(ca.describir_mascara(_mascara_circulo()))
     assert {"id", "area", "circularidad", "Hu1", "Hu7", "cx"} <= set(filas[0])
+
+
+def test_equipo_propio_por_posicion(escena):
+    """Con la homografía, son propios exactamente los jugadores de la media cancha propia (equipo A)."""
+    cajas = [j["caja"] for j in escena.jugadores]
+    sel = ca.seleccionar_equipo_propio(cajas, hom=cal.homografia_cancha(escena.esquinas))
+    assert sel["propio"].tolist() == [j["equipo"] == "A" for j in escena.jugadores]
+    assert "homografía" in sel["criterio"]
+
+
+def test_equipo_propio_sin_esquinas_es_el_mas_cercano(escena):
+    """Sin homografía se elige el grupo de camisetas con los pies más abajo (más cerca de la cámara)."""
+    cajas = [j["caja"] for j in escena.jugadores]
+    equipos = [1 if j["equipo"] == "A" else 0 for j in escena.jugadores]  # etiquetas al revés a propósito
+    sel = ca.seleccionar_equipo_propio(cajas, equipos)
+    assert sel["propio"].tolist() == [j["equipo"] == "A" for j in escena.jugadores]
+
+
+def test_zona_propia():
+    assert ca.zona_propia(10.0).startswith("ataque") and ca.zona_propia(15.0).startswith("defensa")
+    assert ca.seleccionar_equipo_propio([])["propio"].size == 0

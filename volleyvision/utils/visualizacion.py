@@ -101,12 +101,15 @@ def dibujar_puntos(img: np.ndarray, puntos, color=NARANJA, numerar: bool = True,
 
 
 def dibujar_cancha_cenital(posiciones=(), colores=(), ancho_m: float = 9.0, largo_m: float = 18.0,
-                           px_por_m: int = 30, margen_m: float = 2.0, balon=None) -> np.ndarray:
+                           px_por_m: int = 30, margen_m: float = 2.0, balon=None, etiquetas=(),
+                           solo_propia: bool = False) -> np.ndarray:
     """Dibuja una cancha de voleibol vista desde arriba con jugadores y balón.
 
     Orientación de la cámara trasera: ``x`` (0–9 m) de izquierda a derecha y
     ``y`` (0–18 m) de la línea de fondo rival (arriba) a la propia (abajo); la red
     está en ``y = 9``. ``posiciones`` son coordenadas ``(x, y)`` en metros.
+    ``etiquetas`` numera cada punto y ``solo_propia`` recorta el mapa a la media
+    cancha propia (de la red hacia la cámara).
     """
     W = int((ancho_m + 2 * margen_m) * px_por_m)
     H = int((largo_m + 2 * margen_m) * px_por_m)
@@ -129,9 +132,15 @@ def dibujar_cancha_cenital(posiciones=(), colores=(), ancho_m: float = 9.0, larg
         color = colores[i] if i < len(colores) else NARANJA
         cv2.circle(lienzo, px(x, y), 9, GRAFITO, -1)
         cv2.circle(lienzo, px(x, y), 7, color, -1)
+        if i < len(etiquetas):
+            cx, cy = px(x, y)
+            cv2.putText(lienzo, str(etiquetas[i]), (cx + 10, cy + 5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, blanco, 1,
+                        cv2.LINE_AA)
     if balon is not None:
         cv2.circle(lienzo, px(*balon), 6, GRAFITO, -1)
         cv2.circle(lienzo, px(*balon), 4, (0, 230, 255), -1)
+    if solo_propia:  # desde un poco antes de la red hasta el final de la zona libre propia
+        lienzo = lienzo[px(0, largo_m / 2 - 1)[1]:]
     return lienzo
 
 

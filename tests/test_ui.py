@@ -105,7 +105,7 @@ def test_proyeccion_a_la_cancha():
     img, nombre = ui.resolver_imagen(*SEL)
     estado["esquinas"][nombre] = ui.esquinas_ejemplo(nombre, img).tolist()
     apoyo, mapa, tabla, nota = p7_caracterizacion.proyeccion(*SEL, estado)
-    assert nota == "" and len(tabla) >= 1 and set(tabla["equipo"]) <= {"A", "B"}
+    assert nota == "" and (tabla["¿tu equipo?"] != "no").sum() >= 4 and (tabla["¿tu equipo?"] == "no").sum() >= 1
     assert isinstance(apoyo, np.ndarray) and _valor(mapa) is not None
 
 
@@ -132,7 +132,7 @@ def test_analizar_modo_guiado():
     assert "✅" in analizar.estado_esquinas(*SEL, estado)  # la escena de ejemplo trae sus esquinas
     anotada, mapa, resumen, pasos = analizar.analizar(*SEL, False, estado)
     assert anotada.ndim == 3 and mapa is not None and len(pasos) == 7
-    assert "Se encontraron" in resumen and "Balón" in resumen and "En la cancha" in resumen
+    assert "Se encontraron" in resumen and "de tu equipo" in resumen and "Balón" in resumen and "En tu media cancha" in resumen
     assert set(analizar.EXPLICACION_PASOS) == {p.nombre.split(".")[0] for p in pasos}
 
 
@@ -144,4 +144,4 @@ def test_analizar_sin_esquinas_no_dibuja_mapa():
     estado = ui.estado_nuevo()
     assert "Sin esquinas" in analizar.estado_esquinas(*sel, estado)
     _, mapa, resumen, _ = analizar.analizar(*sel, False, estado)
-    assert mapa is None and "En la cancha" not in resumen
+    assert mapa is None and "En tu media cancha" not in resumen

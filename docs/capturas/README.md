@@ -1,6 +1,6 @@
 # Capturas para el README
 
-Capturas de la app (PNG, 1500 px de ancho; la de transformers del Space desplegado y las demás de la app local) que usa la sección **Capturas** del README:
+Capturas de la app local con las fotos reales de ejemplo (PNG, 1500 px de ancho) que usa la sección **Capturas** del README:
 
 | Archivo | Qué capturar |
 |---|---|

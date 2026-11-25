@@ -83,7 +83,7 @@ forzar un dispositivo: `export VOLLEYVISION_DEVICE=cpu`.
 Datos de ejemplo (opcional):
 
 ```bash
-python scripts/generar_sinteticos.py   # ya vienen en el repo; regenera tablero, cancha y video sintéticos
+python scripts/generar_sinteticos.py   # ya vienen en el repo; regenera el tablero de calibración
 python scripts/download_samples.py     # descarga fotos reales con licencia libre de Wikimedia Commons
 ```
 
@@ -144,9 +144,9 @@ Se usa un flujo tipo **Git Flow simplificado**:
 
 | Rama | Propósito |
 |---|---|
-| `main` | Versión estable y entregable. Solo recibe merges desde `develop` y se etiqueta en cada versión (`v1.0.0`, `v1.1.0`, `v2.0.0`, `v2.0.1`, `v2.1.0`, `v2.2.0`). |
+| `main` | Versión estable y entregable. Solo recibe merges desde `develop` y se etiqueta en cada versión (`v1.0.0`, `v1.1.0`, `v2.0.0`, `v2.0.1`, `v2.1.0`, `v2.2.0`, `v2.3.0`). |
 | `develop` | Rama de integración: aquí se juntan los módulos terminados y probados. |
-| `feature/<tema>` | Una rama por módulo del curso: `feature/calibracion`, `feature/filtros`, `feature/histogramas`, `feature/umbralizacion`, `feature/morfologia`, `feature/segmentacion`, `feature/caracterizacion`, `feature/transformers`, `feature/ui` (y `feature/docs` para la documentación). Los cambios posteriores siguen el mismo flujo: `feature/camara-trasera` cambió la cámara a la vista trasera (`v1.1.0`) y `feature/gradio-zerogpu` pasó la interfaz a Gradio con ZeroGPU (`v2.0.0`); `feature/ui-sencilla` agregó el modo guiado para no expertos (`v2.1.0`) y `feature/solo-mi-equipo` hizo que solo se analice el equipo propio (`v2.2.0`). |
+| `feature/<tema>` | Una rama por módulo del curso: `feature/calibracion`, `feature/filtros`, `feature/histogramas`, `feature/umbralizacion`, `feature/morfologia`, `feature/segmentacion`, `feature/caracterizacion`, `feature/transformers`, `feature/ui` (y `feature/docs` para la documentación). Los cambios posteriores siguen el mismo flujo: `feature/camara-trasera` cambió la cámara a la vista trasera (`v1.1.0`) y `feature/gradio-zerogpu` pasó la interfaz a Gradio con ZeroGPU (`v2.0.0`); `feature/ui-sencilla` agregó el modo guiado para no expertos (`v2.1.0`) `feature/solo-mi-equipo` hizo que solo se analice el equipo propio (`v2.2.0`) y `feature/fotos-reales` cambió las escenas sintéticas de la app por fotos reales (`v2.3.0`). |
 
 Reglas:
 
@@ -272,6 +272,15 @@ gitGraph
     merge feature/solo-mi-equipo
     checkout main
     merge develop tag: "v2.2.0"
+    checkout develop
+    branch feature/fotos-reales
+    checkout feature/fotos-reales
+    commit id: "feat: fotos reales de ejemplo"
+    commit id: "test: fotos reales"
+    checkout develop
+    merge feature/fotos-reales
+    checkout main
+    merge develop tag: "v2.3.0"
 ```
 
 Para ver el historial real: `git log --oneline --graph --all`.
@@ -315,7 +324,8 @@ flowchart TB
   modelos se cargan **una vez** por proceso (`ui/modelos.py`) y la inferencia va en funciones
   `@spaces.GPU` para ZeroGPU.
 - **`utils/`**: E/S de imágenes y video, dibujo con la paleta del proyecto y generación de datos
-  sintéticos con verdad conocida (para pruebas y demos sin internet).
+  sintéticos con verdad conocida. La app usa **fotos reales**; las escenas sintéticas solo se generan
+  en memoria para las pruebas automáticas (son las únicas con la posición exacta de cada jugador).
 
 ### Pipeline
 
@@ -349,9 +359,9 @@ VolleyVision/
 │   │   ├── app.py  ├── componentes.py  ├── modelos.py
 │   │   └── paginas/  analizar.py (modo guiado), p0_inicio.py … p9_pipeline.py
 │   └── utils/                # io.py, visualizacion.py, sinteticos.py
-├── data/samples/             # cancha y video sintéticos, tablero (descargadas/ se ignora)
+├── data/samples/             # reales/ (fotos de ejemplo + esquinas), tablero (descargadas/ se ignora)
 ├── scripts/                  # generar_sinteticos.py, download_samples.py
-├── tests/                    # pytest (103 pruebas)
+├── tests/                    # pytest (113 pruebas)
 ├── docs/                     # arquitectura, guion del video, capturas
 ├── app.py                    # punto de entrada (local y Hugging Face Spaces)
 ├── requirements.txt  ├── pytest.ini  ├── LICENSE  └── README.md
@@ -395,7 +405,7 @@ compara los tiempos en tu máquina.
 ## Pruebas
 
 ```bash
-pytest                 # 100 pruebas rápidas (sin descargar modelos)
+pytest                 # 110 pruebas rápidas (sin descargar modelos)
 pytest -m slow         # 3 pruebas que descargan y ejecutan los modelos de Hugging Face
 ```
 
@@ -413,19 +423,26 @@ Qué se verifica, entre otras cosas:
   sintética; sin ella, elige el grupo de camisetas más cercano a la cámara.
 - El pipeline clásico se queda solo con el equipo propio (todos en la media cancha propia), descarta al
   rival y encuentra el balón.
-- La app de Gradio se construye y cada callback de la UI se ejecuta sin excepciones con la escena
-  sintética (sin levantar el servidor); el modo guiado da un resumen con los jugadores de tu equipo,
+- Cada foto real de ejemplo trae las esquinas de su media cancha (convexas, con la red más lejos que
+  la línea de fondo), y en ellas el pipeline se queda solo con el equipo propio, sin jueces ni rivales.
+- La app de Gradio se construye y cada callback de la UI se ejecuta sin excepciones con una foto real
+  (sin levantar el servidor); el modo guiado da un resumen con los jugadores de tu equipo,
   el balón y su zona (ataque o defensa), y sin esquinas no dibuja el mapa.
 
 ---
 
 ## Datos de ejemplo
 
-- `data/samples/cancha_sintetica*.jpg` y `rally_sintetico.mp4`: escenas sintéticas tomadas desde detrás
-  de la línea de fondo propia, con posiciones conocidas (cancha naranja, zona libre verde, equipo propio
-  rojo de espaldas con su número, rival azul, balón amarillo con franjas azules).
+- `data/samples/reales/`: 8 fotos reales del partido Wisconsin vs. Marquette (2023) de
+  [Michael Barera](https://commons.wikimedia.org/wiki/User:Michael_Barera) en Wikimedia Commons, con
+  licencia **CC BY-SA 4.0** (esas fotos siguen bajo esa licencia; créditos en `CREDITOS.md`). Están
+  tomadas desde lo alto de la tribuna, detrás de una línea de fondo. `esquinas.json` guarda las 4
+  esquinas de la media cancha cercana, obtenidas detectando el parqué y proyectando la línea central con
+  la homografía de la cancha completa. No se encontraron fotos o videos libres tomados a la altura de la
+  cancha justo detrás del equipo: para eso lo ideal es grabar un partido propio.
 - `data/samples/tablero/`: 14 fotos sintéticas de un tablero 9 × 6 tomadas con una cámara de K y
-  distorsión conocidas. `tablero_plano.png` es el patrón para imprimir.
+  distorsión conocidas (es la única parte sintética de la app: para calibrar una cámara real hay que
+  fotografiar el tablero impreso con ella). `tablero_plano.png` es el patrón para imprimir.
 - `data/samples/descargadas/` (no versionada): fotos reales de Wikimedia Commons con licencia libre
   (CC0, dominio público, CC BY, CC BY-SA). El script escribe `CREDITOS.md` con autor, licencia y enlace
   de cada una. El filtro es por título, así que conviene revisar las fotos y borrar las que no sean de
@@ -435,17 +452,19 @@ Qué se verifica, entre otras cosas:
 
 ## Limitaciones
 
-- **Cambio de dominio**: los jugadores sintéticos son figuras geométricas y RT-DETR/DETR detectan pocos.
-  En fotos reales ocurre lo contrario: los transformers detectan bien y el método clásico confunde al
-  público con jugadores.
+- **Fotos de tribuna**: en las fotos de ejemplo cada jugadora mide unos 40 px. RT-DETR encuentra a casi
+  todas las de la media cancha propia, pero el balón (~6 px) casi nunca se detecta, ni con el método
+  clásico ni con los transformers. El método clásico confunde a jueces y público con jugadores y pierde
+  a las que se tapan.
 - **Segmentación clásica de jugadores**: supone que los colores dominantes son el fondo (piso, zona
   libre, gradas). Falla con público muy colorido, jugadores superpuestos o colores parecidos al piso.
 - **Solo el equipo propio**: el rival no se analiza; desde atrás queda lejos y tapado por la red y por la
-  primera línea propia. Con las esquinas, son propios los que pisan la media cancha propia (con 0,5 m de
-  margen en la red); sin ellas, el grupo de camisetas con los pies más abajo en la imagen.
-- **Oclusiones de la cámara trasera**: el método clásico puede unir a dos jugadores propios que se tapan
-  (encuentra 5–6 de los 6 propios en las escenas sintéticas). Una cámara elevada (tribuna o trípode
-  alto) reduce el problema.
+  primera línea propia. Con las esquinas, son propios los que pisan la media cancha propia (0,2 m de
+  margen hacia la red, 0,5 m a los lados y hasta 5,5 m detrás de la línea de fondo para quien saca, sin
+  margen lateral ahí para dejar fuera a los jueces de línea); sin ellas, el grupo de camisetas con los
+  pies más abajo en la imagen.
+- **Oclusiones**: el método clásico puede unir a dos jugadores propios que se tapan. Una cámara elevada
+  (como la de las fotos de ejemplo) reduce el problema.
 - **Balón**: los rangos HSV están pensados para balones amarillo/azul; otros colores requieren ajustar
   los sliders.
 - **Homografía**: supone el piso plano y las 4 esquinas de la media cancha propia visibles (las dos de la
@@ -455,7 +474,8 @@ Qué se verifica, entre otras cosas:
   tablero impreso con esa misma cámara y resolución.
 - **Sin esquinas**: el equipo propio se reconoce por el color de la camiseta, así que se asume que los dos
   uniformes son de colores distintos; el líbero y los árbitros pueden quedar mal asignados.
-- **Video**: se procesa frame por frame, sin seguimiento (*tracking*) entre frames.
+- **Video**: no se incluye un video de ejemplo (no hay uno libre con esta vista); se puede subir uno
+  propio. Se procesa frame por frame, sin seguimiento (*tracking*) entre frames.
 - **Recursos**: la primera ejecución descarga unos 850 MB de pesos si se usan todos los modelos; SAM
   ViT-B es lento en CPU (por eso SlimSAM va por defecto).
 

@@ -54,7 +54,7 @@ sequenceDiagram
 
 | Decisión | Motivo |
 |---|---|
-| Datos sintéticos con verdad conocida (`utils/sinteticos.py`) | Permiten **verificar** cada algoritmo con números (K recuperada, jugadores encontrados, posiciones en metros) y que la app funcione sin internet. |
+| Fotos reales en la app; datos sintéticos solo en las pruebas (`utils/sinteticos.py`) | La app muestra fotos reales con licencia libre (con las esquinas de su media cancha guardadas). Las escenas sintéticas, con la posición exacta de cada jugador, permiten **verificar** cada algoritmo con números (K recuperada, jugadores encontrados, posiciones en metros). |
 | Implementaciones manuales junto a las de OpenCV (convolución, Otsu, ecualización, erosión/dilatación, DLT, proyección pinhole) | Muestran la teoría del curso y las pruebas comparan ambas versiones. |
 | RT-DETR por defecto y DETR como opción | RT-DETR es más rápido y preciso; DETR es el modelo original y sirve de referencia en la comparación de tiempos. |
 | SlimSAM por defecto y SAM ViT-B como opción | SlimSAM es viable en CPU (~28 M parámetros frente a ~94 M). |
@@ -80,4 +80,5 @@ sequenceDiagram
 | `tests/test_segmentacion.py` | Contornos, watershed, k-means, jugadores clásicos, IoU |
 | `tests/test_caracterizacion.py` | Descriptores vs. scikit-image, invariancia de Hu, clasificación del balón, proyección, selección del equipo propio |
 | `tests/test_transformers.py` | Pipeline completo, con calibración y sin esquinas; modelos reales (`-m slow`) |
+| `tests/test_reales.py` | Fotos reales de ejemplo: esquinas guardadas válidas y pipeline que se queda solo con el equipo propio |
 | `tests/test_ui.py` | La app de Gradio se construye y cada callback de la UI corre sin excepciones (calibración, esquinas, pipeline); modelos reales con `-m slow` |

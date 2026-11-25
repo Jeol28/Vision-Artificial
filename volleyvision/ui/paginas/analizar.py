@@ -72,7 +72,7 @@ def _resumen(pasos, usar_ia: bool) -> str:
                       "mapa.</span>")
     if usar_ia and datos6.get("Fuente de jugadores") == "clásico":
         lineas.append("<span class='vv-nota'>La inteligencia artificial no reconoció personas en esta imagen "
-                      "(pasa con dibujos como la escena de ejemplo), así que se usó el método clásico.</span>")
+                      "(pasa cuando las personas se ven muy pequeñas), así que se usó el método clásico.</span>")
     tiempo = sum(p.tiempo_ms for p in pasos) / 1000
     lineas.append(f"<span class='vv-nota'>Análisis completo en {tiempo:.1f} s.</span>")
     return "<div class='vv-resumen'>" + "<br>".join(lineas) + "</div>"

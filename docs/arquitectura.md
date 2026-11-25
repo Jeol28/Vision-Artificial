@@ -45,7 +45,8 @@ sequenceDiagram
     P->>T: detectar_objetos(img, RT-DETR/DETR), segmentar_semantica(img)
     P->>K: describir_region, detectar_balon_clasico
     P->>H: asignar_equipos(histogramas H-S de los torsos)
-    P->>C: homografia_cancha(esquinas) → proyectar_jugadores
+    P->>C: homografia_cancha(esquinas)
+    P->>K: seleccionar_equipo_propio(cajas, equipos, hom) → solo tu equipo
     P-->>U: list[Paso] (imágenes intermedias, datos, tiempo)
 ```
 
@@ -63,7 +64,8 @@ sequenceDiagram
 | Estado de la sesión en un `gr.State` | Las esquinas marcadas (por escena) y la calibración se comparten entre pestañas sin variables globales, así cada visitante tiene las suyas. |
 | Selección automática de dispositivo (`cuda` → `mps` → `cpu`) y sincronización antes de medir | Los tiempos en GPU son asíncronos; sin sincronizar se medirían mal. En MPS se convierten las entradas float64 a float32. |
 | Punto de apoyo (centro inferior de la caja) para el mapa cenital | La homografía solo es válida para puntos del plano del piso. |
-| Homografía a partir de la **media cancha propia** (cámara trasera) | Desde detrás de la línea de fondo se ven bien las 4 esquinas de la media cancha propia; la homografía resultante vale para todo el plano del piso, así que también ubica al rival (con menos precisión). Coordenadas: x de 0 a 9 m (izquierda → derecha), y de 0 m (fondo rival) a 18 m (fondo propio). |
+| **Solo el equipo propio** (`seleccionar_equipo_propio`) | Desde atrás el rival queda lejos, pequeño y tapado por la red: analizarlo daría resultados poco fiables. Con las esquinas, son propios los que pisan la media cancha propia (y ≥ 9 m); sin ellas, el grupo de camisetas más cercano a la cámara. El mapa muestra solo la media cancha propia. |
+| Homografía a partir de la **media cancha propia** (cámara trasera) | Desde detrás de la línea de fondo se ven bien las 4 esquinas de la media cancha propia; la homografía resultante vale para todo el plano del piso, y permite decidir quién está en la media cancha propia. Coordenadas: x de 0 a 9 m (izquierda → derecha), y de 0 m (fondo rival) a 18 m (fondo propio). |
 | Páginas con prefijo `pN_` (`p8_transformers.py`) | Ordenan las pestañas y evitan que un módulo llamado `transformers.py` se confunda con la librería `transformers`. |
 
 ## 4. Pruebas
@@ -76,6 +78,6 @@ sequenceDiagram
 | `tests/test_umbralizacion.py` | Otsu manual vs. OpenCV, HSV del balón, rango circular, adaptativo vs. global |
 | `tests/test_morfologia.py` | Erosión/dilatación manuales, dualidad, idempotencia, limpieza de la máscara del balón |
 | `tests/test_segmentacion.py` | Contornos, watershed, k-means, jugadores clásicos, IoU |
-| `tests/test_caracterizacion.py` | Descriptores vs. scikit-image, invariancia de Hu, clasificación del balón, proyección |
+| `tests/test_caracterizacion.py` | Descriptores vs. scikit-image, invariancia de Hu, clasificación del balón, proyección, selección del equipo propio |
 | `tests/test_transformers.py` | Pipeline completo, con calibración y sin esquinas; modelos reales (`-m slow`) |
 | `tests/test_ui.py` | La app de Gradio se construye y cada callback de la UI corre sin excepciones (calibración, esquinas, pipeline); modelos reales con `-m slow` |

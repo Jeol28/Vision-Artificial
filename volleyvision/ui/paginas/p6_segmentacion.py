@@ -59,17 +59,10 @@ def jugadores(*args):
     *vals, kk, cierre, usar_ws = args
     img, nombre = ui.resolver_imagen(*vals)
     r = sg.segmentar_jugadores_clasico(img, int(kk), tam_cierre=int(cierre), usar_watershed=bool(usar_ws))
-    verdad = ui.verdad_muestra(nombre)
     cajas = [x["caja"] for x in r["regiones"]]
-    texto = ""
-    if verdad is not None:
-        ev = sg.emparejar_cajas(cajas, verdad, 0.3)
-        dibujo = vis.dibujar_cajas(img, [{"caja": c, "color": vis.VERDE if ok else vis.ROJO}
-                                         for c, ok in zip(cajas, ev["correctas"])])
-        texto = (f"Verdaderos positivos **{ev['VP']}** · falsos positivos **{ev['FP']}** · "
-                 f"no detectados **{ev['FN']}** (verde = acierto, rojo = error)")
-    else:
-        dibujo = vis.dibujar_cajas(img, [{"caja": c} for c in cajas])
+    dibujo = vis.dibujar_cajas(img, [{"caja": c} for c in cajas])
+    texto = (f"Se encontraron **{len(cajas)}** regiones con forma de persona (más altas que anchas). En fotos "
+             "reales también aparecen jueces, público o jugadores unidos: compáralo con la pestaña 8.")
     gal = ui.galeria({f"Distancia al fondo (T Otsu = {r['kmeans']['T_otsu']})": r["kmeans"]["distancia"],
                       "Máscara limpia": r["mascara"], f"{len(cajas)} jugadores": dibujo})
     return texto, gal
@@ -188,7 +181,7 @@ se guardan solo los vértices. Si dos jugadores se tocan, salen **un solo** cont
 Cadena clásica completa (sin aprendizaje):
 k-means encuentra los colores del **fondo** → distancia de cada píxel al color de fondo más cercano →
 **Otsu** → quitar líneas blancas → apertura + **cierre vertical** → contornos → filtro de forma
-(alto/ancho ≥ 1.3). Funciona en la escena sintética, pero en fotos reales falla con el público, las
+(alto/ancho ≥ 1.3). Funciona cuando el fondo es simple, pero en fotos reales falla con el público, las
 sombras y los jugadores superpuestos. Es la motivación para los transformers.
 """)
             gr.on(None, jugadores, E + [kk, cierre, usar_ws], [texto_j, gal_j], trigger_mode="always_last")

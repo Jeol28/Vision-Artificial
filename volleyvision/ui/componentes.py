@@ -8,7 +8,9 @@ solo al mostrarlas.
 from __future__ import annotations
 
 import copy
+import functools
 import hashlib
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -18,11 +20,11 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from volleyvision.core import calibracion as cal
-from volleyvision.utils import io, sinteticos
+from volleyvision.utils import io
 from volleyvision.utils import visualizacion as vis
 
 MAX_LADO = 960
-MUESTRA_POR_DEFECTO = "cancha_sintetica.jpg"
+MUESTRA_POR_DEFECTO = "marquette_01.jpg"
 FUENTES = ("Imagen de ejemplo", "Subir imagen", "Video (elegir frame)")
 SUBIR_VIDEO = "Subir video…"
 LATEX = [{"left": "$$", "right": "$$", "display": True}, {"left": "$", "right": "$", "display": False}]
@@ -182,8 +184,8 @@ def _visibilidad(fuente, video):
 def selector_imagen(por_defecto: str = MUESTRA_POR_DEFECTO, permitir_video: bool = True) -> SelectorImagen:
     """Selector de imagen: muestra de ejemplo, archivo subido o frame de un video.
 
-    Las muestras incluyen la escena sintética (con verdad conocida) y las fotos
-    reales descargadas con ``scripts/download_samples.py``.
+    Las muestras son fotos reales: las del repositorio (``data/samples/reales/``,
+    con sus esquinas de ejemplo) y las que descargue ``scripts/download_samples.py``.
     """
     muestras = list(io.listar_muestras())
     videos = list(io.listar_videos()) + [SUBIR_VIDEO]
@@ -231,7 +233,7 @@ def resolver_imagen(fuente, muestra, subida, video, video_subido, frame) -> tupl
         return io.redimensionar_max(io.leer_frame(ruta, int(frame or 0)), MAX_LADO), nombre
     muestras = io.listar_muestras()
     if not muestras:
-        raise gr.Error("No hay muestras. Ejecuta `python scripts/generar_sinteticos.py`.")
+        raise gr.Error("No hay imágenes de ejemplo en data/samples/reales/: sube una imagen.")
     nombre = muestra if muestra in muestras else next(iter(muestras))
     return io.cargar_imagen(muestras[nombre], MAX_LADO), nombre
 
@@ -254,13 +256,20 @@ def esquinas_de(estado: dict, nombre: str) -> np.ndarray | None:
     return np.array(pts, np.float32) if pts is not None and len(pts) == 4 else None
 
 
+@functools.lru_cache(maxsize=1)
+def _esquinas_guardadas() -> dict:
+    ruta = io.DIR_REALES / "esquinas.json"
+    return json.loads(ruta.read_text(encoding="utf-8")) if ruta.exists() else {}
+
+
 def esquinas_ejemplo(nombre: str, img: np.ndarray) -> np.ndarray | None:
-    """Esquinas reales de las escenas sintéticas (escaladas al tamaño mostrado)."""
-    if nombre.startswith("cancha_sintetica") or nombre.startswith("rally_sintetico"):
-        h, w = img.shape[:2]
-        esc = np.array([w / sinteticos.TAM_ESCENA[0], h / sinteticos.TAM_ESCENA[1]], np.float32)
-        return sinteticos.ESQUINAS_ESCENA * esc
-    return None
+    """Esquinas de la media cancha propia guardadas para las fotos de ejemplo (escaladas al tamaño mostrado)."""
+    dato = _esquinas_guardadas().get(nombre)
+    if dato is None:
+        return None
+    h, w = img.shape[:2]
+    esc = np.array([w / dato["tam"][0], h / dato["tam"][1]], np.float32)
+    return np.array(dato["esquinas"], np.float32) * esc
 
 
 def _instruccion(n: int) -> str:
@@ -286,7 +295,7 @@ def selector_esquinas(sel: SelectorImagen, estado: gr.State) -> SelectorEsquinas
     """Marca las 4 esquinas de la media cancha propia (cámara trasera) con clics sobre la imagen.
 
     Incluye el orden indicado en pantalla, los puntos dibujados, un botón para
-    reiniciar, las esquinas de ejemplo de la escena sintética y la entrada manual
+    reiniciar, las esquinas de ejemplo de las fotos de muestra y la entrada manual
     de coordenadas como respaldo. Las esquinas quedan en ``estado`` para las
     páginas de Caracterización y Pipeline.
     """
@@ -333,7 +342,7 @@ def selector_esquinas(sel: SelectorImagen, estado: gr.State) -> SelectorEsquinas
         img, nombre = resolver_imagen(*vals)
         ej = esquinas_ejemplo(nombre, img)
         if ej is None:
-            raise gr.Error("Solo las escenas sintéticas tienen esquinas de ejemplo: márcalas con clics.")
+            raise gr.Error("Esta imagen no trae esquinas de ejemplo: márcalas con clics.")
         est = copy.deepcopy(est or estado_nuevo())
         est["esquinas"][nombre] = ej.tolist()
         return (*_vista_esquinas(img, nombre, est), est)
@@ -352,20 +361,3 @@ def selector_esquinas(sel: SelectorImagen, estado: gr.State) -> SelectorEsquinas
     ejemplo.click(usar_ejemplo, entradas + [estado], [imagen, instruccion, estado])
     manual.click(usar_manual, entradas + [estado] + numeros, [imagen, instruccion, estado])
     return SelectorEsquinas(imagen, instruccion)
-
-
-# --------------------------------------------------------------------------
-# Escena sintética: verdad conocida
-# --------------------------------------------------------------------------
-SEMILLAS_MUESTRA = {"cancha_sintetica.jpg": 0, "cancha_sintetica_2.jpg": 5}
-_VERDAD: dict[str, list] = {}
-
-
-def verdad_muestra(nombre: str):
-    """Cajas reales de los jugadores si la imagen es una de las escenas sintéticas."""
-    if nombre not in SEMILLAS_MUESTRA:
-        return None
-    if nombre not in _VERDAD:
-        escena = sinteticos.generar_cancha_sintetica(SEMILLAS_MUESTRA[nombre])
-        _VERDAD[nombre] = [j["caja"] for j in escena.jugadores]
-    return _VERDAD[nombre]

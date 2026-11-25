@@ -1,0 +1,14 @@
+# Créditos de las fotos reales
+
+Fotos de Michael Barera en Wikimedia Commons, publicadas con licencia [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). Se usan reducidas a 1280 px de ancho y sin otros cambios; estas fotos (y solo ellas) siguen bajo CC BY-SA 4.0.
+
+Partido Wisconsin vs. Marquette (voleibol femenino universitario, 2023), tomado desde lo alto de la tribuna detrás de una línea de fondo. `esquinas.json` guarda las 4 esquinas de la media cancha cercana a la cámara (la del equipo que se analiza), en el orden de la app: red izquierda, red derecha, fondo derecha, fondo izquierda. Se obtuvieron detectando el parqué de la cancha (rango HSV + morfología + contorno convexo) y calculando con la homografía de la cancha completa (9 × 18 m) dónde cae la línea central.
+
+- **marquette_01.jpg**: [Wisconsin vs. Marquette women's volleyball 2023 05 (in-match action).jpg](https://commons.wikimedia.org/wiki/File:Wisconsin_vs._Marquette_women%27s_volleyball_2023_05_(in-match_action).jpg), autor: Michael Barera, licencia: CC BY-SA 4.0
+- **marquette_02.jpg**: [Wisconsin vs. Marquette women's volleyball 2023 08 (in-match action).jpg](https://commons.wikimedia.org/wiki/File:Wisconsin_vs._Marquette_women%27s_volleyball_2023_08_(in-match_action).jpg), autor: Michael Barera, licencia: CC BY-SA 4.0
+- **marquette_03.jpg**: [Wisconsin vs. Marquette women's volleyball 2023 09 (in-match action).jpg](https://commons.wikimedia.org/wiki/File:Wisconsin_vs._Marquette_women%27s_volleyball_2023_09_(in-match_action).jpg), autor: Michael Barera, licencia: CC BY-SA 4.0
+- **marquette_04.jpg**: [Wisconsin vs. Marquette women's volleyball 2023 12 (in-match action).jpg](https://commons.wikimedia.org/wiki/File:Wisconsin_vs._Marquette_women%27s_volleyball_2023_12_(in-match_action).jpg), autor: Michael Barera, licencia: CC BY-SA 4.0
+- **marquette_05.jpg**: [Wisconsin vs. Marquette women's volleyball 2023 15 (in-match action).jpg](https://commons.wikimedia.org/wiki/File:Wisconsin_vs._Marquette_women%27s_volleyball_2023_15_(in-match_action).jpg), autor: Michael Barera, licencia: CC BY-SA 4.0
+- **marquette_06.jpg**: [Wisconsin vs. Marquette women's volleyball 2023 18 (in-match action).jpg](https://commons.wikimedia.org/wiki/File:Wisconsin_vs._Marquette_women%27s_volleyball_2023_18_(in-match_action).jpg), autor: Michael Barera, licencia: CC BY-SA 4.0
+- **marquette_07.jpg**: [Wisconsin vs. Marquette women's volleyball 2023 19 (in-match action).jpg](https://commons.wikimedia.org/wiki/File:Wisconsin_vs._Marquette_women%27s_volleyball_2023_19_(in-match_action).jpg), autor: Michael Barera, licencia: CC BY-SA 4.0
+- **marquette_08.jpg**: [Wisconsin vs. Marquette women's volleyball 2023 21 (in-match action).jpg](https://commons.wikimedia.org/wiki/File:Wisconsin_vs._Marquette_women%27s_volleyball_2023_21_(in-match_action).jpg), autor: Michael Barera, licencia: CC BY-SA 4.0

@@ -1,13 +1,15 @@
-"""Genera las muestras sintéticas de data/samples/.
+"""Genera el tablero de calibración de data/samples/.
 
 Uso:
     python scripts/generar_sinteticos.py
 
 Crea:
-* data/samples/tablero/vista_XX.jpg: fotos sintéticas del tablero 9×6 con distorsión conocida.
+* data/samples/tablero/vista_XX.jpg: fotos sintéticas del tablero 9×6 con distorsión conocida
+  (para la pestaña de calibración; con tu cámara, fotografía el tablero impreso).
 * data/samples/tablero_plano.png: el patrón para imprimir.
-* data/samples/cancha_sintetica.jpg y cancha_sintetica_2.jpg: escenas de voleibol.
-* data/samples/rally_sintetico.mp4: video corto con el balón en vuelo.
+
+Las escenas de voleibol de la app son fotos reales (``data/samples/reales/``). Las escenas
+sintéticas con posiciones conocidas solo se generan en memoria para las pruebas automáticas.
 """
 
 import sys
@@ -23,10 +25,6 @@ def main() -> None:
     guardar_imagen(DIR_MUESTRAS / "tablero_plano.png", sint.generar_tablero())
     for i, vista in enumerate(sint.generar_vistas_tablero()):
         guardar_imagen(DIR_TABLERO / f"vista_{i:02d}.jpg", vista)
-    for i, semilla in enumerate((0, 5)):
-        nombre = "cancha_sintetica.jpg" if i == 0 else f"cancha_sintetica_{i + 1}.jpg"
-        guardar_imagen(DIR_MUESTRAS / nombre, sint.generar_cancha_sintetica(semilla).imagen)
-    sint.generar_video_sintetico(DIR_MUESTRAS / "rally_sintetico.mp4")
     print(f"Muestras generadas en {DIR_MUESTRAS}")
 
 

@@ -129,6 +129,9 @@ def dibujar_cancha_cenital(posiciones=(), colores=(), ancho_m: float = 9.0, larg
     cv2.putText(lienzo, "propio (camara)", px(0.2, largo_m + 1.2), cv2.FONT_HERSHEY_SIMPLEX, 0.5, blanco, 1,
                 cv2.LINE_AA)
     for i, (x, y) in enumerate(posiciones):
+        # quien saca puede estar más atrás que el margen dibujado: se muestra en el borde
+        x = float(np.clip(x, -margen_m + 0.3, ancho_m + margen_m - 0.3))
+        y = float(np.clip(y, -margen_m + 0.3, largo_m + margen_m - 0.3))
         color = colores[i] if i < len(colores) else NARANJA
         cv2.circle(lienzo, px(x, y), 9, GRAFITO, -1)
         cv2.circle(lienzo, px(x, y), 7, color, -1)

@@ -1,7 +1,7 @@
 """Pruebas de la UI (Gradio): la app se construye y cada callback corre sin excepciones.
 
 Los callbacks se llaman directamente con los valores por defecto del selector
-de imagen (la escena sintética), sin levantar un servidor.
+de imagen (una foto real de ejemplo con sus esquinas), sin levantar un servidor.
 """
 
 import gradio as gr
@@ -31,9 +31,12 @@ def test_resolver_imagen_por_defecto():
     assert img.ndim == 3 and nombre == ui.MUESTRA_POR_DEFECTO
 
 
-def test_resolver_frame_de_video():
-    img, nombre = ui.resolver_imagen(ui.FUENTES[2], None, None, "rally_sintetico.mp4", None, 10)
-    assert img.ndim == 3 and nombre == "rally_sintetico.mp4"
+def test_resolver_frame_de_video(tmp_path):
+    from volleyvision.utils import sinteticos
+    ruta = tmp_path / "mi_partido.mp4"  # video subido por el usuario (aquí, uno generado para la prueba)
+    sinteticos.generar_video_sintetico(ruta)
+    img, nombre = ui.resolver_imagen(ui.FUENTES[2], None, None, ui.SUBIR_VIDEO, str(ruta), 10)
+    assert img.ndim == 3 and nombre == "mi_partido.mp4"
 
 
 def test_subir_sin_archivo_da_error():
@@ -93,9 +96,9 @@ def test_watershed_separa_los_balones_de_la_demo():
     assert "Contornos encontrarían **1**" in texto and "watershed encuentra **2**" in texto
 
 
-def test_jugadores_con_verdad():
+def test_jugadores_clasicos():
     texto, galeria = p6_segmentacion.jugadores(*SEL, 6, 9, False)
-    assert "Verdaderos positivos" in texto and len(galeria) == 3
+    assert "regiones con forma de persona" in texto and len(galeria) == 3
 
 
 def test_proyeccion_a_la_cancha():

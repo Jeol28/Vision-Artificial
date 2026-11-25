@@ -31,6 +31,18 @@ alta, :math:`e` baja, solidez alta) **y** la mayoría de sus píxeles tienen el
 color del balón. Los jugadores proyectan su **punto de apoyo** (centro inferior
 de la caja, los pies sobre el piso) a la vista cenital con la homografía de la
 cancha, porque la homografía solo es válida para puntos del plano del piso.
+
+Solo el equipo propio
+---------------------
+La cámara está detrás del equipo propio: el rival queda lejos, pequeño y tapado
+por la red y por los propios jugadores, así que no se analiza. Para decidir
+quién es del equipo propio (:func:`seleccionar_equipo_propio`):
+
+* **Con la homografía** (esquinas marcadas): los que pisan la media cancha
+  propia, :math:`y \ge 9` m (la red está en :math:`y = 9`), incluida la zona
+  libre detrás de la línea de fondo.
+* **Sin ella**: de los dos grupos de camisetas (histogramas, tema 3), el que tiene
+  los pies más abajo en la imagen, es decir, más cerca de la cámara.
 """
 
 from __future__ import annotations
@@ -210,3 +222,42 @@ def proyectar_jugadores(cajas, hom: cal.HomografiaCancha, tolerancia_m: float = 
     metros = cal.imagen_a_cancha(pies, hom)
     dentro = cal.esta_en_cancha(metros, hom, tolerancia_m) if len(metros) else np.zeros(0, bool)
     return {"metros": metros, "dentro": dentro, "puntos_imagen": pies}
+
+
+RED_M = 9.0          # la red, en metros desde la línea de fondo rival
+LINEA_ATAQUE_M = 12.0  # línea de ataque del lado propio (3 m detrás de la red)
+
+
+def zona_propia(y_m: float) -> str:
+    """Zona del lado propio según la distancia a la red."""
+    return "ataque (cerca de la red)" if y_m < LINEA_ATAQUE_M else "defensa (atrás)"
+
+
+def seleccionar_equipo_propio(cajas, equipos=None, hom: cal.HomografiaCancha | None = None,
+                              tol_red_m: float = 0.5) -> dict:
+    """Decide qué jugadores son del equipo propio (el que está de espaldas a la cámara).
+
+    Args:
+        cajas: cajas ``(x1, y1, x2, y2)`` de las personas encontradas.
+        equipos: grupo de camiseta de cada caja (0/1, de :func:`histogramas.asignar_equipos`); solo se usa
+            si no hay homografía.
+        hom: homografía de la media cancha propia, si se marcaron las esquinas.
+        tol_red_m: margen hacia el lado rival para los que están pegados a la red.
+
+    Returns:
+        ``propio`` (bool por caja) y ``criterio`` (texto); con homografía también ``metros`` y ``dentro``.
+    """
+    cajas = list(cajas)
+    if not cajas:
+        return {"propio": np.zeros(0, bool), "criterio": "sin jugadores"}
+    if hom is not None:
+        proy = proyectar_jugadores(cajas, hom)
+        propio = proy["dentro"] & (proy["metros"][:, 1] >= RED_M - tol_red_m)
+        return {"propio": propio, "criterio": "posición en la cancha (homografía)",
+                "metros": proy["metros"], "dentro": proy["dentro"]}
+    equipos = np.asarray(equipos if equipos is not None else [0] * len(cajas))
+    if len(set(equipos.tolist())) < 2:
+        return {"propio": np.ones(len(cajas), bool), "criterio": "un solo grupo de camisetas"}
+    pies_y = np.array([punto_apoyo(c)[1] for c in cajas])
+    cercano = max((0, 1), key=lambda e: np.median(pies_y[equipos == e]))
+    return {"propio": equipos == cercano, "criterio": "color de camiseta + cercanía a la cámara"}

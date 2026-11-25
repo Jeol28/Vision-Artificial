@@ -36,7 +36,7 @@ Imagen / frame
   │ 3. Bilateral + Canny + Hough
   │ 4. Umbral (Otsu, HSV) + morfología
   │ 5. Segmentación clásica ┃ transformer
-  │ 6. Caracterización + equipos
+  │ 6. Caracterización + tu equipo
   ▼ 7. Mapa cenital (homografía)
 ```
 """

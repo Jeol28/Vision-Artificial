@@ -71,8 +71,8 @@ def uniformes(*args):
 def construir(estado: gr.State) -> None:
     ui.encabezado("3 · Histogramas", "Distribución de color, corrección de iluminación y comparación de uniformes.")
     ui.en_pocas_palabras("un histograma cuenta cuántos píxeles hay de cada tono. Sirve para corregir una foto muy "
-                         "oscura o con luz desigual, y para comparar el color de las camisetas y saber quién es "
-                         "de cada equipo.")
+                         "oscura o con luz desigual, y para comparar el color de las camisetas y distinguir a tu "
+                         "equipo del rival.")
     sel = ui.selector_imagen()
     E = sel.entradas
     with gr.Tabs():

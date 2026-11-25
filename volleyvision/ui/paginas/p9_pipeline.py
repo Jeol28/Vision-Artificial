@@ -16,7 +16,7 @@ def estado_esquinas(*args):
     if ui.esquinas_de(estado, nombre) is not None:
         return "Esquinas de la media cancha: ✅ marcadas"
     if usar_ejemplo and ui.esquinas_ejemplo(nombre, img) is not None:
-        return "Esquinas de la media cancha: ✅ de ejemplo (escena sintética)"
+        return "Esquinas de la media cancha: ✅ de ejemplo (guardadas con la foto)"
     return "Esquinas de la media cancha: ❌ sin marcar (el paso 7 se omite)"
 
 
@@ -62,7 +62,7 @@ def construir(estado: gr.State) -> None:
                 ui.md("**Calibración y cancha**")
                 usar_calib = gr.Checkbox(False, label="Corregir distorsión con la calibración",
                                          info="Calibra primero en la pestaña 1. Solo para imágenes de esa cámara.")
-                usar_ejemplo = gr.Checkbox(True, label="Usar esquinas de ejemplo de la escena sintética")
+                usar_ejemplo = gr.Checkbox(True, label="Usar las esquinas de ejemplo de la foto de muestra")
                 texto_esq = ui.md()
             with gr.Column():
                 ui.md("**Clásico**")

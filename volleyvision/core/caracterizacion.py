@@ -39,8 +39,9 @@ por la red y por los propios jugadores, así que no se analiza. Para decidir
 quién es del equipo propio (:func:`seleccionar_equipo_propio`):
 
 * **Con la homografía** (esquinas marcadas): los que pisan la media cancha
-  propia, :math:`y \ge 9` m (la red está en :math:`y = 9`), incluida la zona
-  libre detrás de la línea de fondo.
+  propia, :math:`y \ge 9` m (la red está en :math:`y = 9`), con poco margen a
+  los lados, hasta 5,5 m detrás de la línea de fondo (ahí está quien saca) y sin
+  margen lateral detrás de ella (así quedan fuera los jueces de línea de las esquinas).
 * **Sin ella**: de los dos grupos de camisetas (histogramas, tema 3), el que tiene
   los pies más abajo en la imagen, es decir, más cerca de la cámara.
 """
@@ -234,7 +235,7 @@ def zona_propia(y_m: float) -> str:
 
 
 def seleccionar_equipo_propio(cajas, equipos=None, hom: cal.HomografiaCancha | None = None,
-                              tol_red_m: float = 0.5) -> dict:
+                              tol_red_m: float = 0.2, tol_lateral_m: float = 0.5, fondo_m: float = 5.5) -> dict:
     """Decide qué jugadores son del equipo propio (el que está de espaldas a la cámara).
 
     Args:
@@ -242,7 +243,10 @@ def seleccionar_equipo_propio(cajas, equipos=None, hom: cal.HomografiaCancha | N
         equipos: grupo de camiseta de cada caja (0/1, de :func:`histogramas.asignar_equipos`); solo se usa
             si no hay homografía.
         hom: homografía de la media cancha propia, si se marcaron las esquinas.
-        tol_red_m: margen hacia el lado rival para los que están pegados a la red.
+        tol_red_m: margen hacia el lado rival (las rivales que bloquean pisan a ~0,5 m de la red).
+        tol_lateral_m: margen fuera de las líneas laterales dentro de la cancha. Detrás de la línea de fondo
+            no hay margen: ahí, justo afuera de las esquinas, se paran los jueces de línea.
+        fondo_m: cuánto detrás de la línea de fondo propia se acepta (ahí está quien saca).
 
     Returns:
         ``propio`` (bool por caja) y ``criterio`` (texto); con homografía también ``metros`` y ``dentro``.
@@ -252,7 +256,10 @@ def seleccionar_equipo_propio(cajas, equipos=None, hom: cal.HomografiaCancha | N
         return {"propio": np.zeros(0, bool), "criterio": "sin jugadores"}
     if hom is not None:
         proy = proyectar_jugadores(cajas, hom)
-        propio = proy["dentro"] & (proy["metros"][:, 1] >= RED_M - tol_red_m)
+        x, y = proy["metros"][:, 0], proy["metros"][:, 1]
+        tol_x = np.where(y <= hom.largo_m, tol_lateral_m, 0.0)
+        propio = ((x >= -tol_x) & (x <= hom.ancho_m + tol_x)
+                  & (y >= RED_M - tol_red_m) & (y <= hom.largo_m + fondo_m))
         return {"propio": propio, "criterio": "posición en la cancha (homografía)",
                 "metros": proy["metros"], "dentro": proy["dentro"]}
     equipos = np.asarray(equipos if equipos is not None else [0] * len(cajas))

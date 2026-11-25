@@ -8,7 +8,6 @@ from volleyvision.ui import componentes as ui
 from volleyvision.ui import modelos
 from volleyvision.utils import visualizacion as vis
 
-MUESTRA_REAL = "voleibol_03.jpg"
 CLASICO = "Clásico (k-means + morfología)"
 
 
@@ -31,7 +30,7 @@ def comparacion(*args):
     """Clásico y cada detector elegido sobre la misma imagen, con tiempos y aciertos."""
     *vals, umbral, elegidos = args
     img, nombre = ui.resolver_imagen(*vals)
-    comp = modelos.comparar(img, list(elegidos or []), float(umbral), ui.verdad_muestra(nombre))
+    comp = modelos.comparar(img, list(elegidos or []), float(umbral))
     imagenes, filas = {}, []
     for metodo, c in comp.items():
         dets = c["resultado"]["detecciones"]
@@ -54,10 +53,8 @@ def comparacion(*args):
     fig = vis.grafica_barras([f["método"].split(" (")[0] for f in filas], [f["tiempo (ms)"] for f in filas],
                              "Tiempo de inferencia", [vis.HEX["neutro"], vis.HEX["naranja"], "#4C8DFF"][:len(filas)],
                              "ms")
-    nota = ""
-    if next(iter(comp.values()))["evaluacion"] is not None:
-        nota = ("<span class='vv-nota'>Escena sintética con verdad conocida: verde = persona bien detectada, "
-                "rojo = falso positivo.</span>")
+    nota = ("<span class='vv-nota'>Naranja = persona, amarillo = balón. Las fotos reales no traen las posiciones "
+            "verdaderas, así que se comparan el número de detecciones y los tiempos.</span>")
     return ui.galeria(imagenes), pd.DataFrame(filas), ui.figura(fig), nota
 
 
@@ -67,7 +64,7 @@ def construir(estado: gr.State) -> None:
     ui.en_pocas_palabras("RT-DETR y DETR son modelos de inteligencia artificial ya entrenados con miles de fotos: "
                          "encuentran personas y balones sin que les digamos de qué color son. Aquí se comparan con "
                          "el método clásico, en aciertos y en tiempo.")
-    sel = ui.selector_imagen(por_defecto=MUESTRA_REAL)
+    sel = ui.selector_imagen()
     E = sel.entradas
     if modelos.EN_ZEROGPU:
         ui.md("<span class='vv-nota'>Los modelos corren en una GPU de ZeroGPU que se asigna en cada ejecución "
@@ -121,7 +118,7 @@ Misma imagen, tres métodos:
   reales. RT-DETR suele ser bastante más rápido que DETR.
 
 El tiempo medido es solo la red (sin pre/posproceso), después de una inferencia de calentamiento.
-En la escena sintética, los jugadores son figuras geométricas y los transformers detectan pocos: es un
-ejemplo de **cambio de dominio**.
+En las fotos de ejemplo (tribuna alta, jugadoras de ~40 px) el método clásico confunde a jueces y
+público con jugadores, y el balón es tan pequeño que a veces ni los transformers lo ven.
 """)
             boton_c.click(comparacion, E + [umbral_c, elegidos], [gal, tabla_c, tiempos, nota_c])

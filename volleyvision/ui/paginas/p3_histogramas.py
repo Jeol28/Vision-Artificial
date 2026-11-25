@@ -63,8 +63,6 @@ def uniformes(*args):
     ax.set_yticks(range(len(M)), [str(i + 1) for i in range(len(M))], fontsize=7)
     fig.colorbar(im, ax=ax)
     texto = f"Equipo A: **{equipos.count(0)}** · Equipo B: **{equipos.count(1)}**"
-    if ui.verdad_muestra(nombre) is not None and fuente == FUENTES_JUGADORES[0]:
-        texto += "  \n<span class='vv-nota'>En la escena sintética el equipo A viste de rojo y el B de azul.</span>"
     return ui.rgb(anotada), ui.figura(fig), texto
 
 

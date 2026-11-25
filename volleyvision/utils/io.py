@@ -15,6 +15,8 @@ import numpy as np
 RAIZ_PROYECTO = Path(__file__).resolve().parents[2]
 DIR_MUESTRAS = RAIZ_PROYECTO / "data" / "samples"
 DIR_TABLERO = DIR_MUESTRAS / "tablero"
+DIR_REALES = DIR_MUESTRAS / "reales"
+DIR_DESCARGADAS = DIR_MUESTRAS / "descargadas"
 EXTENSIONES_IMAGEN = {".png", ".jpg", ".jpeg", ".bmp", ".webp"}
 EXTENSIONES_VIDEO = {".mp4", ".avi", ".mov", ".mkv"}
 
@@ -65,18 +67,19 @@ def a_gris(img: np.ndarray) -> np.ndarray:
     return img if img.ndim == 2 else cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 
-def listar_muestras() -> dict[str, Path]:
-    """Imágenes de ejemplo disponibles (sintéticas y descargadas), nombre → ruta.
+def _archivos_de_muestra() -> list[Path]:
+    """Fotos reales del repositorio primero; después las que descargue ``scripts/download_samples.py``."""
+    return sorted(DIR_REALES.glob("*")) + sorted(DIR_DESCARGADAS.glob("*"))
 
-    Se excluye el patrón del tablero (es para imprimir, no una escena)."""
-    rutas = sorted(DIR_MUESTRAS.glob("*")) + sorted((DIR_MUESTRAS / "descargadas").glob("*"))
-    return {r.name: r for r in rutas if r.suffix.lower() in EXTENSIONES_IMAGEN and not r.name.startswith("tablero")}
+
+def listar_muestras() -> dict[str, Path]:
+    """Imágenes de ejemplo disponibles (todas reales), nombre → ruta."""
+    return {r.name: r for r in _archivos_de_muestra() if r.suffix.lower() in EXTENSIONES_IMAGEN}
 
 
 def listar_videos() -> dict[str, Path]:
-    """Videos de ejemplo disponibles, nombre → ruta."""
-    rutas = sorted(DIR_MUESTRAS.glob("*")) + sorted((DIR_MUESTRAS / "descargadas").glob("*"))
-    return {r.name: r for r in rutas if r.suffix.lower() in EXTENSIONES_VIDEO}
+    """Videos de ejemplo disponibles, nombre → ruta (los que copies a ``data/samples/descargadas/``)."""
+    return {r.name: r for r in _archivos_de_muestra() if r.suffix.lower() in EXTENSIONES_VIDEO}
 
 
 def listar_tableros() -> list[Path]:

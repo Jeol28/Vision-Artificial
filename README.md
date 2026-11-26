@@ -144,7 +144,7 @@ Se usa un flujo tipo **Git Flow simplificado**:
 
 | Rama | Propósito |
 |---|---|
-| `main` | Versión estable y entregable. Solo recibe merges desde `develop` y se etiqueta en cada versión (`v1.0.0`, `v1.1.0`, `v2.0.0`, `v2.0.1`, `v2.1.0`, `v2.2.0`, `v2.3.0`). |
+| `main` | Versión estable y entregable. Solo recibe merges desde `develop` y se etiqueta en cada versión (`v1.0.0`, `v1.1.0`, `v2.0.0`, `v2.0.1`, `v2.1.0`, `v2.2.0`, `v2.3.0`, `v2.3.1`). |
 | `develop` | Rama de integración: aquí se juntan los módulos terminados y probados. |
 | `feature/<tema>` | Una rama por módulo del curso: `feature/calibracion`, `feature/filtros`, `feature/histogramas`, `feature/umbralizacion`, `feature/morfologia`, `feature/segmentacion`, `feature/caracterizacion`, `feature/transformers`, `feature/ui` (y `feature/docs` para la documentación). Los cambios posteriores siguen el mismo flujo: `feature/camara-trasera` cambió la cámara a la vista trasera (`v1.1.0`) y `feature/gradio-zerogpu` pasó la interfaz a Gradio con ZeroGPU (`v2.0.0`); `feature/ui-sencilla` agregó el modo guiado para no expertos (`v2.1.0`) `feature/solo-mi-equipo` hizo que solo se analice el equipo propio (`v2.2.0`) y `feature/fotos-reales` cambió las escenas sintéticas de la app por fotos reales (`v2.3.0`). |
 
@@ -281,6 +281,14 @@ gitGraph
     merge feature/fotos-reales
     checkout main
     merge develop tag: "v2.3.0"
+    checkout develop
+    branch feature/ajustes-video
+    checkout feature/ajustes-video
+    commit id: "fix: primer árbitro fuera"
+    checkout develop
+    merge feature/ajustes-video
+    checkout main
+    merge develop tag: "v2.3.1"
 ```
 
 Para ver el historial real: `git log --oneline --graph --all`.

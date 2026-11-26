@@ -102,6 +102,8 @@ def proyeccion(*args):
                            "zona": ca.zona_propia(float(m[1])) if i in numero else
                            ("lado rival" if d else "fuera de la cancha")}
                           for i, (m, d) in enumerate(zip(sel["metros"], sel["dentro"]))])
+    orden = [numero.get(i, len(cajas) + i) for i in range(len(cajas))]  # tu equipo primero, por número
+    tabla = tabla.iloc[sorted(range(len(cajas)), key=orden.__getitem__)].reset_index(drop=True)
     return ui.rgb(dibujo), mapa, tabla, ""
 
 

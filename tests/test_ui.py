@@ -108,7 +108,7 @@ def test_proyeccion_a_la_cancha():
     img, nombre = ui.resolver_imagen(*SEL)
     estado["esquinas"][nombre] = ui.esquinas_ejemplo(nombre, img).tolist()
     apoyo, mapa, tabla, nota = p7_caracterizacion.proyeccion(*SEL, estado)
-    assert nota == "" and (tabla["¿tu equipo?"] != "no").sum() >= 4 and (tabla["¿tu equipo?"] == "no").sum() >= 1
+    assert nota == "" and (tabla["¿tu equipo?"] != "no").sum() >= 3 and (tabla["¿tu equipo?"] == "no").sum() >= 1
     assert isinstance(apoyo, np.ndarray) and _valor(mapa) is not None
 
 

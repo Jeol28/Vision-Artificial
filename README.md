@@ -460,7 +460,7 @@ Qué se verifica, entre otras cosas:
   libre, gradas). Falla con público muy colorido, jugadores superpuestos o colores parecidos al piso.
 - **Solo el equipo propio**: el rival no se analiza; desde atrás queda lejos y tapado por la red y por la
   primera línea propia. Con las esquinas, son propios los que pisan la media cancha propia (0,2 m de
-  margen hacia la red, 0,5 m a los lados y hasta 5,5 m detrás de la línea de fondo para quien saca, sin
+  margen hacia la red, 0,2 m a los lados (el primer árbitro queda fuera) y hasta 5,5 m detrás de la línea de fondo para quien saca, sin
   margen lateral ahí para dejar fuera a los jueces de línea); sin ellas, el grupo de camisetas con los
   pies más abajo en la imagen.
 - **Oclusiones**: el método clásico puede unir a dos jugadores propios que se tapan. Una cámara elevada

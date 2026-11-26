@@ -235,7 +235,7 @@ def zona_propia(y_m: float) -> str:
 
 
 def seleccionar_equipo_propio(cajas, equipos=None, hom: cal.HomografiaCancha | None = None,
-                              tol_red_m: float = 0.2, tol_lateral_m: float = 0.5, fondo_m: float = 5.5) -> dict:
+                              tol_red_m: float = 0.2, tol_lateral_m: float = 0.2, fondo_m: float = 5.5) -> dict:
     """Decide qué jugadores son del equipo propio (el que está de espaldas a la cámara).
 
     Args:
@@ -244,8 +244,9 @@ def seleccionar_equipo_propio(cajas, equipos=None, hom: cal.HomografiaCancha | N
             si no hay homografía.
         hom: homografía de la media cancha propia, si se marcaron las esquinas.
         tol_red_m: margen hacia el lado rival (las rivales que bloquean pisan a ~0,5 m de la red).
-        tol_lateral_m: margen fuera de las líneas laterales dentro de la cancha. Detrás de la línea de fondo
-            no hay margen: ahí, justo afuera de las esquinas, se paran los jueces de línea.
+        tol_lateral_m: margen fuera de las líneas laterales (el primer árbitro, en su silla junto a la red,
+            queda fuera). Detrás de la línea de fondo no hay margen: ahí, justo afuera de las esquinas, se
+            paran los jueces de línea.
         fondo_m: cuánto detrás de la línea de fondo propia se acepta (ahí está quien saca).
 
     Returns:
